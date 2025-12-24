@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="mb-4">
+    <form action="/" method="GET" class="d-flex">
+        <div class="input-group shadow-sm" style="border-radius: 30px; overflow: hidden; background: white;">
+            <span class="input-group-text border-0 bg-white ps-3">
+                <i class="fas fa-search text-muted"></i>
+            </span>
+            <input type="text" name="search" class="form-control border-0 shadow-none" placeholder="Search rice, soap, oil..." value="{{ request.GET.search|default:'' }}">
+            <button class="btn btn-primary px-4" type="submit" style="border-radius: 0 30px 30px 0;">
+                Go
+            </button>
+        </div>
+    </form>
+</div>
+
+
+<div class="d-flex overflow-auto mb-4 pb-2" style="white-space: nowrap; scrollbar-width: none; -ms-overflow-style: none;">
+    
+    <a href="/" class="text-decoration-none text-dark">
+        <div class="text-center me-3">
+            <div class="rounded-circle d-flex align-items-center justify-content-center border" 
+                 style="width: 60px; height: 60px; font-size: 24px; 
+                 background: {% if not request.GET.category %}#e67e22{% else %}#fff{% endif %}; 
+                 color: {% if not request.GET.category %}#fff{% else %}#000{% endif %};">
+                <i class="fas fa-th-large"></i>
+            </div>
+            <small class="d-block mt-1 fw-bold">All</small>
+        </div>
+    </a>
+
+    {% for cat in categories %}
+    <a href="/?category={{ cat.id }}" class="text-decoration-none text-dark">
+        <div class="text-center me-3">
+            <div class="rounded-circle border d-flex align-items-center justify-content-center overflow-hidden" 
+                 style="width: 60px; height: 60px; 
+                 border: 2px solid {% if request.GET.category == cat.id|stringformat:'s' %}#e67e22{% else %}#dee2e6{% endif %} !important;
+                 background: #fff;">
+                
+                {% if cat.image %}
+                    <img src="{{ cat.image.url }}" alt="{{ cat.name }}" style="width: 100%; height: 100%; object-fit: cover;">
+                {% else %}
+                    <span class="fw-bold">{{ cat.name|slice:":1" }}</span>
+                {% endif %}
+            </div>
+            
+            <small class="d-block mt-1 {% if request.GET.category == cat.id|stringformat:'s' %}fw-bold text-primary{% endif %}">
+                {{ cat.name }}
+            </small>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+
+<div class="card bg-dark text-white mb-4 shadow-sm" style="border-radius: 15px; overflow: hidden;">
+    <div class="card-body p-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+        <h4 class="fw-bold">⚡ Fast Delivery</h4>
+        <p class="mb-2 small">5km ke andar free delivery payein.</p>
+    </div>
+</div>
+
+<h5 class="fw-bold mb-3">Recommended for You</h5>
+
+<div class="row g-3">
+    {% for product in products %}
+    <div class="col-6 col-md-3">
+        <div class="card h-100 border-0 shadow-sm" style="border-radius: 12px;">
+            <div style="height: 140px; overflow: hidden; border-radius: 12px 12px 0 0; background: #f8f9fa; position: relative;">
+                {% if product.image %}
+                <img src="{{ product.image.url }}" class="card-img-top" alt="{{ product.name }}" style="width: 100%; height: 100%; object-fit: contain; padding: 10px;">
+                {% endif %}
+                
+                {% if product.stock_quantity == 0 %}
+                <div class="position-absolute top-0 start-0 bg-danger text-white px-2 py-1 small" style="border-radius: 12px 0 10px 0; font-size: 10px;">
+                    OUT OF STOCK
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="card-body p-2">
+                <h6 class="card-title text-truncate mb-1" style="font-size: 14px;">{{ product.name }}</h6>
+                <p class="text-muted small mb-1" style="font-size: 12px;">{{ product.unit }}</p>
+                <span class="fw-bold text-dark d-block mb-2">₹{{ product.selling_price }}</span>
+
+                {% if product.stock_quantity > 0 %}
+                    <form action="{% url 'add_to_cart' product.id %}" method="POST">
+                        {% csrf_token %} <div class="row g-1 align-items-center">
+                            <div class="col-4">
+                                <input type="number" name="quantity" value="1" min="1" max="{{ product.stock_quantity }}" class="form-control text-center p-0" style="font-size: 14px; height: 30px;">
+                            </div>
+                            
+                            <div class="col-8">
+                                <button type="submit" class="btn btn-sm btn-outline-primary w-100" style="height: 30px;">
+                                    Add <i class="fas fa-plus ms-1" style="font-size: 10px;"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                {% else %}
+                    <button class="btn btn-sm btn-secondary w-100" disabled>
+                        Out of Stock
+                    </button>
+                {% endif %}
+                </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div style="height: 80px;"></div>
+
+{% endblock %}

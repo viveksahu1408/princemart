@@ -1,0 +1,88 @@
+{% extends 'admin/base_site.html' %}
+ {% block content %}
+<div class="container-fluid">
+    <h1 class="mt-4">📊 Business Overview</h1>
+    
+    <div class="row mt-4">
+        <div class="col-md-3">
+            <div class="card text-white bg-primary mb-3" style="border-radius: 15px;">
+                <div class="card-body">
+                    <h5 class="card-title">Total Products</h5>
+                    <h2 class="font-weight-bold">{{ total_products }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-success mb-3" style="border-radius: 15px;">
+                <div class="card-body">
+                    <h5 class="card-title">Total Revenue</h5>
+                    <h2 class="font-weight-bold">₹{{ revenue }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-warning mb-3" style="border-radius: 15px;">
+                <div class="card-body">
+                    <h5 class="card-title">Total Orders</h5>
+                    <h2 class="font-weight-bold">{{ total_orders }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-danger mb-3" style="border-radius: 15px;">
+                <div class="card-body">
+                    <h5 class="card-title">Stock Available</h5>
+                    <h2 class="font-weight-bold">{{ total_stock }} Pcs</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-8">
+            <div class="card shadow" style="border-radius: 15px;">
+                <div class="card-header bg-dark text-white">
+                    Monthly Sales Report (Last 6 Months)
+                </div>
+                <div class="card-body">
+                    <canvas id="salesChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow" style="border-radius: 15px;">
+                <div class="card-header bg-info text-white">
+                    Quick Actions
+                </div>
+                <div class="card-body">
+                    <a href="/admin/store/product/add/" class="btn btn-outline-primary w-100 mb-2">+ Add New Product</a>
+                    <a href="/admin/store/order/" class="btn btn-outline-success w-100">Check Recent Orders</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    var ctx = document.getElementById('salesChart').getContext('2d');
+    var myChart = new Chart(ctx, {
+        type: 'bar', // 'line' bhi kar sakta hai agar line chart chahiye
+        data: {
+            labels: {{ months|safe }}, // Backend se months aaye
+            datasets: [{
+                label: 'Sales in Rupees (₹)',
+                data: {{ sales|safe }}, // Backend se sales aayi
+                backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+                y: { beginAtZero: true }
+            }
+        }
+    });
+</script>
+{% endblock %}

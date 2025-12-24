@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-7 mb-4">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white">
+                <h4 class="mb-0 fw-bold">📍 Delivery Details</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Naam</label>
+                        {{ form.customer_name }}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Mobile Number</label>
+                        {{ form.customer_phone }}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Address</label>
+                        {{ form.customer_address }}
+                    </div>
+
+                    <button type="submit" class="btn btn-success w-100 py-2 mt-3 fw-bold">
+                        Confirm Order (₹{{ total_price }})
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-5">
+        <div class="card shadow-sm border-0 bg-light">
+            <div class="card-body">
+                <h5 class="fw-bold mb-3">Order Summary</h5>
+                <ul class="list-group mb-3">
+                    {% for item in cart_items %}
+                    <li class="list-group-item d-flex justify-content-between lh-sm">
+                        <div>
+                            <h6 class="my-0">{{ item.product.name }}</h6>
+                            <small class="text-muted">Qty: {{ item.quantity }}</small>
+                        </div>
+                        <span class="text-muted">₹{{ item.total }}</span>
+                    </li>
+                    {% endfor %}
+                    <li class="list-group-item d-flex justify-content-between bg-white fw-bold">
+                        <span>Total (INR)</span>
+                        <span>₹{{ total_price }}</span>
+                    </li>
+                </ul>
+
+                <div class="text-center mt-4 p-3 bg-white rounded border">
+                    <p class="mb-2 fw-bold text-secondary">Pay via UPI</p>
+                    
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_code_for_mobile_English_Wikipedia.svg" alt="QR Code" style="width: 150px; height: 150px;">
+                    
+                    <p class="small text-muted mt-2">Scan karke pay karein ya COD select karein.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div style="height: 100px;"></div>
+{% endblock %}

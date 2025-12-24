@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<h4 class="mb-3 fw-bold">🛒 Your Shopping Cart</h4>
+
+{% if cart_products %}
+<div class="row">
+    <div class="col-md-8">
+        {% for item in cart_products %}
+        <div class="card mb-3 shadow-sm border-0" style="border-radius: 10px;">
+            <div class="row g-0 align-items-center">
+                <div class="col-3 col-md-2 p-2">
+                    {% if item.product.image %}
+                    <img src="{{ item.product.image.url }}" class="img-fluid rounded" alt="...">
+                    {% endif %}
+                </div>
+                
+                <div class="col-9 col-md-10">
+                    <div class="card-body py-2">
+                        <h6 class="card-title mb-1">{{ item.product.name }}</h6>
+                        <small class="text-muted">{{ item.product.unit }}</small>
+                        
+                        <div class="d-flex align-items-center mb-2">
+    <a href="{% url 'update_cart' item.product.id 'minus' %}" class="btn btn-sm btn-outline-secondary px-2 py-0" style="border-radius: 5px;">
+        <i class="fas fa-minus small"></i>
+    </a>
+
+    <span class="mx-2 fw-bold">{{ item.quantity }}</span>
+
+    <a href="{% url 'update_cart' item.product.id 'plus' %}" class="btn btn-sm btn-outline-secondary px-2 py-0" style="border-radius: 5px;">
+        <i class="fas fa-plus small"></i>
+    </a>
+    
+    <small class="text-muted ms-3">x ₹{{ item.product.selling_price }}</small>
+</div>
+
+<div class="d-flex justify-content-between align-items-center">
+    <span class="text-primary fw-bold">Total: ₹{{ item.total }}</span>
+    <a href="{% url 'update_cart' item.product.id 'remove' %}" class="text-danger" title="Remove Item">
+        <i class="fas fa-trash"></i>
+    </a>
+</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="col-md-4">
+        <div class="card shadow-sm border-0 bg-white" style="border-radius: 15px;">
+            <div class="card-body">
+                <h5 class="card-title fw-bold mb-3">Bill Details</h5>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Total Items</span>
+                    <span>{{ total_items }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-3">
+                    <span>Delivery Charges</span>
+                    <span class="text-success">Free</span>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between mb-4">
+                    <span class="h5 fw-bold">Total Amount</span>
+                    <span class="h5 fw-bold text-primary">₹{{ total_price }}</span>
+                </div>
+                
+                <a href="{% url 'checkout' %}" class="btn btn-dark w-100 py-2" style="border-radius: 10px;">
+                    Proceed to Checkout <i class="fas fa-arrow-right ms-2"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% else %}
+<div class="text-center mt-5">
+    <i class="fas fa-shopping-basket text-muted mb-3" style="font-size: 80px;"></i>
+    <h3>Your cart is empty!</h3>
+    <p class="text-muted">Jao bhai, kuch saman khareed lo.</p>
+    <a href="{% url 'home' %}" class="btn btn-primary">Start Shopping</a>
+</div>
+{% endif %}
+
+<div style="height: 100px;"></div>
+
+{% endblock %}
