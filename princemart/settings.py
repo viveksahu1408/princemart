@@ -43,6 +43,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -119,6 +120,12 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+# Ye batata hai ki files kahan ikhattha karni hain
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+# Ye WhiteNoise ko activate karta hai
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
 #this is for image
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
@@ -154,3 +161,6 @@ JAZZMIN_UI_TWEAKS = {
     "theme": "flatly",   # Ye theme modern hai (Blue/White)
     "dark_mode_theme": "darkly", # Dark mode bhi chalega
 }
+
+# settings.py ke end me daal de
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
