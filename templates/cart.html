@@ -4,10 +4,10 @@
 
 <h4 class="mb-3 fw-bold">🛒 Your Shopping Cart</h4>
 
-{% if cart_products %}
+{% if cart_items %}
 <div class="row">
     <div class="col-md-8">
-        {% for item in cart_products %}
+        {% for item in cart_items %}
         <div class="card mb-3 shadow-sm border-0" style="border-radius: 10px;">
             <div class="row g-0 align-items-center">
                 <div class="col-3 col-md-2 p-2">
@@ -37,6 +37,7 @@
 
 <div class="d-flex justify-content-between align-items-center">
     <span class="text-primary fw-bold">Total: ₹{{ item.total }}</span>
+    
     <a href="{% url 'update_cart' item.product.id 'remove' %}" class="text-danger" title="Remove Item">
         <i class="fas fa-trash"></i>
     </a>

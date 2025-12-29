@@ -20,6 +20,23 @@
                         <label class="form-label">Mobile Number</label>
                         {{ form.customer_phone }}
                     </div>
+
+                    <div class="mb-3 p-3 bg-light border rounded">
+                        <label class="form-label fw-bold mb-2">Order kaise chahiye?</label>
+                        <div class="d-flex gap-4">
+                            {% for radio in form.delivery_mode %}
+                            <div class="form-check">
+                                {{ radio.tag }}
+                                <label class="form-check-label" for="{{ radio.id_for_label }}">
+                                    {{ radio.choice_label }}
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <small class="text-muted mt-2 d-block" style="font-size: 12px;">
+                            *Pickup select karne par koi delivery charge nahi lagega.
+                        </small>
+                    </div>
                     
                     <div class="mb-3">
                         <label class="form-label">Address</label>
@@ -54,16 +71,17 @@
                     </li>
                 </ul>
 
-                <div class="text-center mt-4 p-3 bg-white rounded border">
-                    <p class="mb-2 fw-bold text-secondary">Pay via UPI</p>
-                    
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_code_for_mobile_English_Wikipedia.svg" alt="QR Code" style="width: 150px; height: 150px;">
-                    
-                    <p class="small text-muted mt-2">Scan karke pay karein ya COD select karein.</p>
+                <div class="text-center mt-3 p-3 rounded" style="background-color: #fff3cd; border: 1px solid #ffeeba;">
+                    <p class="mb-2 fw-bold text-dark"><i class="fas fa-info-circle me-1"></i> कृपया ध्यान दें</p>
+                    <p class="small text-dark mb-0" style="line-height: 1.5;">
+                        अगर आप <strong>5:00 PM</strong> से पहले ऑर्डर करते हैं तो ऑर्डर उसी दिन प्राप्त होगा।<br>
+                        शाम 5 बजे के बाद ऑर्डर करने पर डिलीवरी <strong>अगले दिन</strong> होगी।
+                    </p>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
 <div style="height: 100px;"></div>
 {% endblock %}

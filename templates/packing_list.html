@@ -1,0 +1,55 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <style>
+        body { font-family: Helvetica, sans-serif; font-size: 14px; }
+        .header { text-align: center; margin-bottom: 20px; border-bottom: 2px dashed #000; padding-bottom: 10px;}
+        .check-box { width: 20px; height: 20px; border: 1px solid #000; display: inline-block; }
+        .table { width: 100%; border-collapse: collapse; }
+        .table th, .table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div style="margin-bottom: 15px;">
+        <strong>Bill To:</strong><br>
+        Name: {{ order.customer_name }}<br>
+        Phone: {{ order.customer_phone }}<br>
+        Address: {{ order.customer_address }}<br>
+        Date: {{ order.date }} | Order ID: #{{ order.id }}
+        <p><strong>Mode:</strong> 
+    {% if order.delivery_mode == 'Pickup' %}
+        <span style="background-color: yellow; padding: 2px 5px;">SELF PICKUP (Dukaan se lenge)</span>
+    {% else %}
+        Home Delivery
+    {% endif %}
+</p>
+    </div>
+    </div>
+
+    <table class="table">
+        <thead>
+            <tr style="background-color: #eee;">
+                <th width="10%">Check</th>
+                <th width="40%">Item Name</th>
+                <th width="15%">Qty</th>
+                <th width="15%">Price</th>
+                <th width="20%">Qty</th> </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td><div class="check-box"></div></td>
+                <td>{{ item.product.name }}</td>
+                <td><strong>{{ item.quantity }} {{ item.product.unit }}</strong></td>
+                <td>Rs. {{ item.price }}</td>
+                <td>Rs. {{ item.get_cost|stringformat:".0f" }}</td> </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <div style="margin-top: 20px;">
+        <p><strong>Total Value:</strong> Rs. {{ order.total_amount }}</p>
+    </div>
+</body>
+</html>

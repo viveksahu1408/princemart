@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="mb-4">
+    <h4 class="fw-bold mb-3">🔔 Notifications & Offers</h4>
+
+    {% if notifs %}
+        {% for notif in notifs %}
+        <div class="card mb-3 shadow-sm border-0" style="border-radius: 12px; border-left: 5px solid #ffc107 !important;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <h6 class="fw-bold mb-1">{{ notif.title }}</h6>
+                    <small class="text-muted" style="font-size: 10px;">{{ notif.date|date:"d M, P" }}</small>
+                </div>
+                <p class="text-muted mb-0 small">{{ notif.message }}</p>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="text-center mt-5 text-muted">
+            <i class="far fa-bell-slash fa-3x mb-3"></i>
+            <p>Filhal koi naya offer nahi hai.</p>
+        </div>
+    {% endif %}
+</div>
+<div style="height: 80px;"></div>
+{% endblock %}

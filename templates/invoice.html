@@ -1,0 +1,71 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <style>
+        body { font-family: Helvetica, sans-serif; font-size: 12px; }
+        .header { text-align: center; margin-bottom: 20px; }
+        .store-name { font-size: 20px; font-weight: bold; color: #e67e22; }
+        .table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .table th, .table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        .table th { background-color: #f2f2f2; }
+        .total-section { margin-top: 20px; text-align: right; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="store-name">PRINCE MART</div>
+        <div>Main Market, Katni, MP - 483501</div>
+        <div>Phone: 9300247194 | GSTIN: 23ABCDE1234F1Z5</div>
+        <h3>TAX INVOICE</h3>
+        <p><strong>Mode:</strong> 
+    {% if order.delivery_mode == 'Pickup' %}
+        <span style="background-color: yellow; padding: 2px 5px;">SELF PICKUP (Dukaan se lenge)</span>
+    {% else %}
+        Home Delivery
+    {% endif %}
+</p>
+    </div>
+
+    <div style="margin-bottom: 15px;">
+        <strong>Bill To:</strong><br>
+        Name: {{ order.customer_name }}<br>
+        Phone: {{ order.customer_phone }}<br>
+        Address: {{ order.customer_address }}<br>
+        Date: {{ order.date }} | Order ID: #{{ order.id }}
+    </div>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Item</th>
+                <th>Qty</th>
+                <th>Price</th>
+                <th>Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td>{{ item.product.name }}</td>
+                <td>{{ item.quantity }}</td>
+                <td>{{ item.price }}</td>
+                <td>
+                    {{ item.price|stringformat:".0f" }} x {{ item.quantity }} = 
+                    <strong>Rs. {{ item.get_cost|stringformat:".0f" }}</strong>
+                </td>
+            </tr>
+            {% endfor %}  </tbody>
+    </table>
+
+    <div class="total-section">
+        <p>Sub Total: Rs. {{ amount_without_tax }}</p>
+        <p>GST (18%): Rs. {{ tax_amount }}</p>
+        <h3>Grand Total: Rs. {{ order.total_amount }}</h3>
+    </div>
+
+    <div style="margin-top: 50px; text-align: center; font-size: 10px;">
+        <p>This is a computer generated invoice.</p>
+        <p>Thank you for shopping with Prince Mart!</p>
+    </div>
+</body>
+</html>

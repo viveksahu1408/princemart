@@ -82,23 +82,44 @@
   </head>
   <body>
 
+    
+
     <nav class="navbar navbar-dark navbar-desktop sticky-top shadow-sm">
       <div class="container-fluid">
+        
+        
+        
         <a class="navbar-brand fw-bold" href="/">
-            <i class="fas fa-shopping-basket text-warning"></i> P Mart katni
+           <i class="fas text-warning"></i> P
+
+            <i class="fas fa-shopping-basket text-warning"></i> Mart
         </a>
+
+
         
         <div class="d-none d-md-flex">
+            
             <a href="/" class="nav-link text-white me-3">Home</a>
             <a href="{% url 'my_orders' %}" class="nav-link text-white me-3">Orders</a>
+            <a href="{% url 'notifications' %}" class="nav-link text-white me-3">Notifications </a>
             <a href="{% url 'cart' %}" class="btn btn-warning ..."> <i class="fas fa-shopping-cart"></i> Cart
-             </a>
+            </a>
+             
         </div>
+        
 
         <div class="d-md-none text-white">
-            <i class="fas fa-bell"></i>
-        </div>
+    <a href="{% url 'notifications' %}" class="nav-item-mobile text-white">
+        <i class="fas fa-bell"></i>
+    </a>
+</div>
+
+
+        
+        
       </div>
+      
+      
     </nav>
 
     <div class="container mt-3">
@@ -129,31 +150,47 @@
         {% endblock %}
     </div>
 
-    <div class="bottom-nav "><!-- d-md-none (ise add kar denge to bottom nav sirf webapp me show hogi) -->
-        <a href="/" class="nav-item-mobile active">
+    <div class="bottom-nav"> <a href="{% url 'home' %}" class="nav-item-mobile {% if request.path == '/' %}active{% endif %}">
             <i class="fas fa-home"></i>
             <span>Home</span>
         </a>
         
         <a href="/?focus_search=true" onclick="document.querySelector('input[name=search]').focus(); return false;" class="nav-item-mobile">
-    <i class="fas fa-search"></i>
-    <span>Search</span>
-</a>
-        <a href="{% url 'cart' %}" class="nav-item-mobile position-relative">
+            <i class="fas fa-search"></i>
+            <span>Search</span>
+        </a>
+
+        <a href="{% url 'cart' %}" class="nav-item-mobile position-relative {% if '/cart/' in request.path %}active{% endif %}">
             <i class="fas fa-shopping-cart"></i>
-            <span class="cart-badge">0</span> <span>Cart</span>
+            <span class="badge bg-danger" style="position: absolute; top: 5px; right: 20px; font-size: 10px;">{{ cart_count }}</span>
+            <span>Cart</span>
         </a>
         
-        <a href="{% url 'my_orders' %}" class="nav-item-mobile">
-    <i class="fas fa-user"></i>
-    <span>Profile</span>
-</a>
+        <a href="{% url 'notifications' %}" class="nav-item-mobile {% if '/notifications/' in request.path %}active{% endif %}">
+            <i class="fas fa-bell"></i>
+            <span>Offers</span>
+        </a>
+
+        {% if user.is_staff %}
+            <a href="{% url 'admin_dashboard' %}" class="nav-item-mobile text-warning {% if '/admin/dashboard/' in request.path %}active{% endif %}">
+                <i class="fas fa-chart-line"></i>
+                <span>Admin</span>
+            </a>
+        {% else %}
+            <a href="{% url 'my_orders' %}" class="nav-item-mobile {% if '/my-orders/' in request.path %}active{% endif %}">
+                <i class="fas fa-user"></i>
+                <span>Profile</span>
+            </a>
+        {% endif %}
+        
     </div>
 
     <footer class="bg-dark text-white text-center py-4 mt-5 d-none d-md-block">
         <div class="container">
-            <p class="mb-1">&copy; 2024 Prince Mart. All Rights Reserved.</p>
-            <small class="text-white">Developed by Decode Web Tech</small>
+            <p class="mb-1">&copy; 2025 Prince Mart. All Rights Reserved.</p>
+            <small class="text-white">Developed by Decode Web Tech </small>
+            <small class="text-white">Mo. +91 7999182954 </small>
+
         </div>
     </footer>
 

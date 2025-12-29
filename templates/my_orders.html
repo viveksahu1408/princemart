@@ -1,61 +1,67 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<h4 class="mb-3 fw-bold">👤 My Profile & Orders</h4>
-
-<div class="alert alert-info py-2">
-    <small><i class="fas fa-info-circle"></i> Orders linked to: <strong>{{ request.session.customer_phone }}</strong></small>
-</div>
-
-{% if orders %}
-    {% for order in orders %}
-    <div class="card mb-3 shadow-sm border-0" style="border-radius: 12px; overflow: hidden;">
-        <div class="card-header bg-white d-flex justify-content-between align-items-center">
-            <div>
-                <span class="badge bg-secondary">Order #{{ order.id }}</span>
-                <small class="text-muted ms-2">{{ order.date }}</small>
+<div class="mb-4">
+    <h4 class="fw-bold mb-3"><i class="fas fa-user-circle me-2"></i>My Profile</h4>
+    
+    <div class="card shadow-sm border-0 mb-4" style="border-radius: 15px; background: linear-gradient(to right, #4facfe 0%, #00f2fe 100%); color: white;">
+        <div class="card-body p-4">
+            <div class="d-flex align-items-center">
+                <div class="bg-white text-primary rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 60px; height: 60px; font-size: 24px;">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div>
+                    <h5 class="mb-0 fw-bold">{{ customer.name|default:"Guest User" }}</h5>
+                    <p class="mb-0 small opacity-75">+91 {{ customer.phone }}</p>
+                    <p class="mb-0 small opacity-75"><i class="fas fa-map-marker-alt me-1"></i> {{ customer.address|default:"Address not found" }}</p>
+                </div>
             </div>
-            <span class="fw-bold text-primary">₹{{ order.total_amount }}</span>
         </div>
+    </div>
 
-        <div class="card-body">
-            <ul class="list-unstyled mb-0">
-                {% for item in order.orderitem_set.all %}
-                <li class="small d-flex justify-content-between">
-                    <span>{{ item.quantity }} x {{ item.product.name }}</span>
-                    <span class="text-muted">₹{{ item.price }}</span>
-                </li>
-                {% endfor %}
-            </ul>
-        </div>
-
-        <div class="card-footer bg-light d-flex justify-content-between align-items-center">
-            
-            {% if order.status %}
-                <span class="text-success fw-bold">
-                    <i class="fas fa-check-circle"></i> Delivered
-                </span>
-                <button class="btn btn-sm btn-outline-success disabled">Completed</button>
-            {% else %}
-                <span class="text-warning fw-bold">
-                    <i class="fas fa-clock"></i> On the Way
-                </span>
+    <h5 class="fw-bold mb-3">📦 Order History</h5>
+    {% if orders %}
+        {% for order in orders %}
+        <div class="card mb-3 shadow-sm border-0" style="border-radius: 12px;">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+                <div>
+                    <span class="badge bg-dark">Order #{{ order.id }}</span>
+                    <small class="text-muted ms-2">{{ order.date }}</small>
+                </div>
                 
-                <a href="{% url 'mark_order_received' order.id %}" class="btn btn-sm btn-primary">
-                    Mark Received <i class="fas fa-hand-holding-box"></i>
+                <a href="{% url 'order_invoice' order.id %}" class="btn btn-sm btn-outline-primary" title="Download Bill">
+                    <i class="fas fa-file-invoice"></i> Bill
                 </a>
-            {% endif %}
-            
+            </div>
+
+            <div class="card-body">
+                <ul class="list-unstyled mb-0">
+                    {% for item in order.orderitem_set.all %}
+                    <li class="d-flex justify-content-between mb-1">
+                        <small>{{ item.quantity }} x {{ item.product.name }}</small>
+                        <small class="fw-bold">₹{{ item.get_cost|stringformat:".0f" }}</small>
+                    </li>
+                    {% endfor %}
+                </ul>
+                <hr class="my-2">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="fw-bold text-primary">Total: ₹{{ order.total_amount }}</span>
+                    
+                    {% if order.status %}
+                        <span class="badge bg-success">Delivered</span>
+                    {% else %}
+                        <span class="badge bg-warning text-dark">On the Way</span>
+                    {% endif %}
+                </div>
+            </div>
         </div>
-    </div>
-    {% endfor %}
-
-{% else %}
-    <div class="text-center mt-5">
-        <p>Aapne abhi tak koi order nahi kiya.</p>
-        <a href="{% url 'home' %}" class="btn btn-primary">Shop Now</a>
-    </div>
-{% endif %}
-
-<div style="height: 100px;"></div>
+        {% endfor %}
+    {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-shopping-basket text-muted mb-3" style="font-size: 50px;"></i>
+            <p>Abhi tak koi order nahi kiya.</p>
+        </div>
+    {% endif %}
+</div>
+<div style="height: 80px;"></div>
 {% endblock %}
