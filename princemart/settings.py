@@ -149,6 +149,15 @@ JAZZMIN_SETTINGS = {
         "auth.User": "fas fa-users",
     },
 
+    # --- 👇 YE NAYA CODE HAI (Sidebar me link dikhane ke liye) 👇 ---
+    "custom_links": {
+        "store": [{
+            "name": "📊 Analytics Dashboard", 
+            "url": "admin_dashboard", 
+            "icon": "fas fa-chart-line",
+        }]
+    },
+
     "topmenu_links": [
         {"name": "Home",  "url": "admin:index", "permissions": ["auth.view_user"]},
         {"name": "Analytics Dashboard", "url": "admin_dashboard", "permissions": ["auth.view_user"]}, # <--- Ye Link

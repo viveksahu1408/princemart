@@ -34,6 +34,10 @@ urlpatterns = [
     path('invoice/<int:order_id>/', views.order_invoice, name='order_invoice'),
     path('packing-list/<int:order_id>/', views.packing_list, name='packing_list'),
     path('export-orders/', views.export_orders_xls, name='export_orders'),
+
+    path('order-receipt/<int:order_id>/', views.order_receipt_pdf, name='order_receipt_pdf'),
+
+    path('admin-dashboard/customers/', views.customer_insights, name='customer_insights'),
 ]
 
 if settings.DEBUG:

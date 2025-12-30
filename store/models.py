@@ -73,11 +73,15 @@ class CartItem(models.Model):
         return self.product.selling_price * self.quantity
 
 
-# 3. Order (Bina Area restriction ke)
+# store/models.py
+
 class Order(models.Model):
+    # 👇 YE LINE MISSING THI (Isse jodo) 👇
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    
     customer_name = models.CharField(max_length=50)
     customer_phone = models.CharField(max_length=15)
-    customer_address = models.TextField(blank=True) # Ab user kuch bhi address dal sakta hai
+    customer_address = models.TextField(blank=True) 
     
     date = models.DateField(default=datetime.datetime.today)
     total_amount = models.DecimalField(default=0, max_digits=10, decimal_places=2)
@@ -85,7 +89,6 @@ class Order(models.Model):
     status = models.BooleanField(default=False, help_text="Delivery Status")
     is_paid = models.BooleanField(default=False, help_text="Payment Status")
 
-    #ye delivery options ke liye 
     DELIVERY_CHOICES = [
         ('Delivery', 'Home Delivery'),
         ('Pickup', 'Self Pickup (Dukaan se lenge)'),
@@ -94,7 +97,8 @@ class Order(models.Model):
 
     def __str__(self):
         return f"Order: {self.id} - {self.customer_name}"
-
+    
+    
 # 4. OrderItem (Order details)
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE)

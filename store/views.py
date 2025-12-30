@@ -12,10 +12,12 @@ from django.db.models import Q # Search ke liye
 from .utils import render_to_pdf 
 import csv # Excel export ke liye
 from django.http import HttpResponse
-from django.db.models import Sum # Ye import jaruri hai
+from django.db.models import Sum,Count # Ye import jaruri hai
 from django.db.models.functions import TruncMonth
 from .models import Notification,Cart, CartItem # notification ke liye h 
 from django.core.exceptions import ObjectDoesNotExist # Ye error handle karne ke liye
+from django.http import JsonResponse # Sabse upar ye import kar
+from django.contrib.auth.models import User
 
 
 @staff_member_required # Sirf admin hi dekh payega
@@ -30,6 +32,14 @@ def admin_dashboard(request):
     orders = Order.objects.all().order_by('-id')
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
+
+   # 1. Search Logic (Name or Mobile)
+    search_query = request.GET.get('search_query')
+    if search_query:
+        orders = orders.filter(
+            Q(customer_name__icontains=search_query) | 
+            Q(customer_phone__icontains=search_query)
+        )
 
     if start_date and end_date:
         # Agar date select ki hai to filter karo
@@ -280,31 +290,66 @@ def _cart_id(request):
     if not cart:
         cart = request.session.create()
     return cart
+# Views.py me add_to_cart function
 
-# --- 1. ADD TO CART (Database Wala) ---
+# def add_to_cart(request, product_id):
+#     current_product = Product.objects.get(id=product_id)
+    
+#     # 1. Cart ka pata lagao
+#     try:
+#         cart = Cart.objects.get(cart_id=_cart_id(request))
+#     except Cart.DoesNotExist:
+#         cart = Cart.objects.create(cart_id=_cart_id(request))
+#     cart.save()
+
+#     # 2. Cart Item logic
+#     try:
+#         cart_item = CartItem.objects.get(product=current_product, cart=cart)
+#         if request.method == 'POST':
+#             quantity = int(request.POST.get('quantity', 1))
+#             cart_item.quantity += quantity
+#         else:
+#             cart_item.quantity += 1
+#         cart_item.save()
+#     except CartItem.DoesNotExist:
+#         quantity = int(request.POST.get('quantity', 1))
+#         cart_item.create(
+#             product=current_product,
+#             quantity=quantity,
+#             cart=cart
+#         )
+#         cart_item.save()
+    
+#     # --- 👇 YAHAN MISSING THA (Ye line add kar) 👇 ---
+#     cart_count = CartItem.objects.filter(cart=cart).count()
+#     # ------------------------------------------------
+
+#     return JsonResponse({
+#         'status': 'success', 
+#         'message': 'Product added successfully', 
+#         'cart_count': cart_count  # Ab ye chalega kyunki upar humne count nikaal liya
+#     })
+
 def add_to_cart(request, product_id):
     current_product = Product.objects.get(id=product_id)
     
-    # 1. Cart ka pata lagao (Ya naya banao)
+    # 1. Cart ka pata lagao
     try:
         cart = Cart.objects.get(cart_id=_cart_id(request))
     except Cart.DoesNotExist:
         cart = Cart.objects.create(cart_id=_cart_id(request))
     cart.save()
 
-    # 2. Cart Item ka pata lagao
+    # 2. Quantity nikalo (AJAX se aa rahi hai ya Form se)
+    # Agar AJAX se 'qty' aayi hai to wo lo, nahi to 1
+    quantity = int(request.GET.get('qty', 1))
+
+    # 3. Cart Item Logic
     try:
         cart_item = CartItem.objects.get(product=current_product, cart=cart)
-        # Agar item pehle se hai, to quantity badhao
-        if request.method == 'POST':
-            quantity = int(request.POST.get('quantity', 1))
-            cart_item.quantity += quantity
-        else:
-            cart_item.quantity += 1 # Default +1
+        cart_item.quantity += quantity # Jo quantity aayi wo add kar do
         cart_item.save()
     except CartItem.DoesNotExist:
-        # Naya item create karo
-        quantity = int(request.POST.get('quantity', 1))
         cart_item = CartItem.objects.create(
             product=current_product,
             quantity=quantity,
@@ -312,9 +357,15 @@ def add_to_cart(request, product_id):
         )
         cart_item.save()
     
-    messages.success(request, "Item cart me add ho gaya! 🛒")
-    return redirect('cart')
+    # 4. Cart Count update karo
+    cart_count = CartItem.objects.filter(cart=cart).count()
 
+    # 5. JSON Return karo (Page refresh nahi hoga)
+    return JsonResponse({
+        'status': 'success', 
+        'message': 'Product added successfully', 
+        'cart_count': cart_count
+    })
 
 # --- 2. CART DETAILS (Database Wala) ---
 # store/views.py
@@ -401,6 +452,8 @@ def checkout(request):
         if form.is_valid():
             # 1. Order Create
             order = form.save(commit=False)
+            if request.user.is_authenticated:
+                order.user = request.user
             order.total_amount = total_price
             order.save()
             request.session['customer_phone'] = order.customer_phone
@@ -447,29 +500,38 @@ def checkout(request):
 
 # 1. Profile / My Orders Page
 def my_orders(request):
-    # Session se number nikalo
-    phone = request.session.get('customer_phone')
-    
-    if not phone:
-        messages.warning(request, "Pehle ek order to place karo bhai!")
-        return redirect('home')
-    
-    # Us number ke saare orders dhundho (Latest pehle)
-    orders = Order.objects.filter(customer_phone=phone).order_by('-id')
-    
-    # Latest order se customer ki details nikal lo (Profile ke liye)
     customer_info = {}
-    if orders.exists():
-        latest_order = orders.first()
+    orders = []
+
+    # CASE 1: Agar User Login hai (To ID se saare order nikalo)
+    if request.user.is_authenticated:
+        orders = Order.objects.filter(user=request.user).order_by('-id')
         customer_info = {
-            'name': latest_order.customer_name,
-            'phone': latest_order.customer_phone,
-            'address': latest_order.customer_address
+            'name': request.user.first_name + ' ' + request.user.last_name,
+            'phone': request.user.username, # Agar username hi mobile no. hai
+            'address': 'Saved Address'
         }
+    
+    # CASE 2: Agar Guest User hai (To Session Phone se nikalo)
+    else:
+        phone = request.session.get('customer_phone')
+        if not phone:
+            messages.warning(request, "Pehle ek order to place karo bhai!")
+            return redirect('home')
+        
+        orders = Order.objects.filter(customer_phone=phone).order_by('-id')
+        
+        if orders.exists():
+            latest_order = orders.first()
+            customer_info = {
+                'name': latest_order.customer_name,
+                'phone': latest_order.customer_phone,
+                'address': latest_order.customer_address
+            }
 
     context = {
         'orders': orders,
-        'customer': customer_info # Ye naya bheja hai  
+        'customer': customer_info
     }
     return render(request, 'my_orders.html', context)
 
@@ -558,3 +620,72 @@ def admin_toggle_status(request, order_id):
     messages.success(request, f"Order #{order.id} is now {status_msg}")
     
     return redirect('admin_dashboard') # Wapas dashboard par bhej diya
+
+
+# --- 2. Thermal Receipt (Choti Machine ke liye) ---
+def order_receipt_pdf(request, order_id):
+    order = get_object_or_404(Order, id=order_id)
+    # Note: Maine yahan 'items' ka naam badal ke 'order_items' kar diya hai
+    # taaki jo HTML maine pehle diya tha usse match kare.
+    order_items = OrderItem.objects.filter(order=order) 
+    
+    # Tax Calculation (Same logic jo tune likha hai)
+    try:
+        amount_without_tax = round(float(order.total_amount) / 1.18, 2)
+        tax_amount = round(float(order.total_amount) - amount_without_tax, 2)
+    except:
+        amount_without_tax = 0
+        tax_amount = 0
+
+    context = {
+        'order': order,
+        'order_items': order_items, # Dhyan dena: HTML me humne 'order_items' use kiya hai
+        'amount_without_tax': amount_without_tax,
+        'tax_amount': tax_amount,
+        'today': datetime.date.today(),
+    }
+    
+    # YAHAN CHANGE HUA HAI: 
+    # Humne 'invoice.html' ki jagah naya 'receipt_pdf.html' lagaya hai
+    return render_to_pdf('receipt_pdf.html', context)
+
+
+# --- Customer Search & Insights View ---
+@staff_member_required
+def customer_insights(request):
+    query = request.GET.get('q')
+    users_data = []
+    
+    if query:
+        # Naam, Email ya Username (Mobile) se dhoondho
+        users = User.objects.filter(
+            username__icontains=query
+        ) | User.objects.filter(
+            first_name__icontains=query
+        ) | User.objects.filter(
+            email__icontains=query
+        )
+        
+        # Har dhoondhe huye user ka hisaab nikalo
+        for user in users:
+            # Total Orders gino
+            total_orders = Order.objects.filter(user=user).count()
+            
+            # Total Kharcha (Amount) jodo
+            total_spent = Order.objects.filter(user=user).aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+            
+            users_data.append({
+                'id': user.id,
+                'username': user.username, # Mobile No.
+                'name': f"{user.first_name} {user.last_name}",
+                'email': user.email,
+                'total_orders': total_orders,
+                'total_spent': total_spent,
+                'is_staff': user.is_staff
+            })
+
+    context = {
+        'users_data': users_data,
+        'query': query,
+    }
+    return render(request, 'customer_insights.html', context)

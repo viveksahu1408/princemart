@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Receipt</title>
+    <style>
+        @page {
+            size: 58mm 200mm; /* Width 58mm, Height 200mm (lamba page) */
+            margin: 2mm;
+        }
+
+        body {
+            font-family: Helvetica, sans-serif; /* Simple Font */
+            font-size: 11px;
+            color: #000;
+            background: #fff;
+            margin: 2mm;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 5px;
+        }
+
+        .header h2 {
+            margin: 0;
+            font-size: 14px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .header p {
+            margin: 0;
+            font-size: 10px;
+        }
+
+        .divider {
+            border-bottom: 1px dashed #000;
+            margin: 5px 0;
+            width: 100%;
+        }
+
+        .info {
+            font-size: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 5px;
+        }
+
+        th {
+            text-align: left;
+            font-size: 10px;
+            border-bottom: 1px solid #000;
+            padding-bottom: 2px;
+        }
+
+        td {
+            font-size: 10px;
+            padding: 2px 0;
+            vertical-align: top;
+        }
+
+        .qty-col {
+            text-align: center;
+            width: 15%;
+        }
+
+        .price-col {
+            text-align: right;
+            width: 25%;
+        }
+
+        .item-col {
+            width: 60%;
+        }
+
+        .total-section {
+            margin-top: 5px;
+            text-align: right;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 9px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h2>Prince Mart</h2>
+        <p>Main Market, Katni</p>
+        <p>Mo: 7999182954</p>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="info">
+        <strong>Order ID:</strong> #{{ order.id }}<br>
+        <strong>Date:</strong> {{ order.created_at|date:"d/m/y" }}<br>
+        <strong>Time:</strong> {{ order.created_at|date:"H:i" }}
+    </div>
+
+    <div class="divider"></div>
+
+    <table>
+        <thead>
+            <tr>
+                <th class="item-col">Item</th>
+                <th class="qty-col">Qty</th>
+                <th class="price-col">Amt</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in order_items %}
+            <tr>
+                <td class="item-col">
+                    {{ item.product.name }}
+                    <br>
+                    <span style="font-size:8px; color:#333;">
+                        ( Rs.{{ item.product.selling_price }})
+                    </span>
+                </td>
+                <td class="qty-col">{{ item.quantity }}</td>
+                <td class="price-col">{{ item.get_cost|stringformat:".0f" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="divider"></div>
+
+    <div class="total-section">
+        Total: Rs. {{ order.total_amount }}
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="footer">
+        <p>Thank You!</p>
+        <p>Visit Again</p>
+    </div>
+
+</body>
+</html>
