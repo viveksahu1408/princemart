@@ -123,26 +123,26 @@
     {% if product.stock_quantity > 0 %}
     
     <div class="row g-1 align-items-center">
-        <div class="col-5">
-            <div class="input-group input-group-sm">
-                <button class="btn btn-outline-secondary px-1" type="button" 
-                        onclick="changeQty('{{ product.id }}', -1)">-</button>
-                
-                <input type="text" id="qty-{{ product.id }}" class="form-control text-center px-1" 
-                       value="1" readonly style="background: white;">
-                
-                <button class="btn btn-outline-success px-1" type="button" 
-                        onclick="changeQty('{{ product.id }}', 1, {{ product.stock_quantity }})">+</button>
-            </div>
-        </div>
-
-        <div class="col-7">
-            <button onclick="addToCart('{{ product.id }}', '{% url 'add_to_cart' product.id %}')" 
-                    class="btn btn-primary btn-sm w-100">
-                Add <i class="fas fa-shopping-cart"></i>
-            </button>
+    <div class="col-7 col-sm-6 col-md-5">  <!-- Mobile pe 7 (~58%), tablet pe 6, desktop pe 5 -->
+        <div class="input-group input-group-sm">
+            <button class="btn btn-outline-secondary px-1" type="button" 
+                    onclick="changeQty('{{ product.id }}', -1)">-</button>
+            
+            <input type="text" id="qty-{{ product.id }}" class="form-control text-center px-1" 
+                   value="1" readonly style="background: white;">
+            
+            <button class="btn btn-outline-success px-1" type="button" 
+                    onclick="changeQty('{{ product.id }}', 1, {{ product.stock_quantity }})">+</button>
         </div>
     </div>
+
+    <div class="col-5 col-sm-6 col-md-7">  <!-- Mobile pe 5 (~42%), tablet pe 6, desktop pe 7 (add button zyada jagah if needed) -->
+        <button onclick="addToCart('{{ product.id }}', '{% url 'add_to_cart' product.id %}')" 
+                class="btn btn-primary btn-sm w-100">
+            Add <i class="fas fa-"></i>
+        </button>
+    </div>
+</div>
 
     {% else %}
         <button class="btn btn-sm btn-secondary w-100" disabled>
