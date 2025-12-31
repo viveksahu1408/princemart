@@ -330,42 +330,59 @@ def _cart_id(request):
 #         'cart_count': cart_count  # Ab ye chalega kyunki upar humne count nikaal liya
 #     })
 
+
 def add_to_cart(request, product_id):
-    current_product = Product.objects.get(id=product_id)
-    
-    # 1. Cart ka pata lagao
+    # 1. Product nikalo (get_object_or_404 best hai)
+    product = get_object_or_404(Product, id=product_id)
+
+    # 2. Quantity nikalo (Jo humne JS se bheji hai '?quantity=3')
+    # Agar URL me quantity nahi mili, to default 1 manenge
+    try:
+        quantity = int(request.GET.get('quantity', 1))
+    except ValueError:
+        quantity = 1
+
+    # 3. Cart ka pata lagao
     try:
         cart = Cart.objects.get(cart_id=_cart_id(request))
     except Cart.DoesNotExist:
         cart = Cart.objects.create(cart_id=_cart_id(request))
     cart.save()
 
-    # 2. Quantity nikalo (AJAX se aa rahi hai ya Form se)
-    # Agar AJAX se 'qty' aayi hai to wo lo, nahi to 1
-    quantity = int(request.GET.get('qty', 1))
-
-    # 3. Cart Item Logic
+    # 4. Cart Item Logic (Jodna hai ya naya banana hai)
     try:
-        cart_item = CartItem.objects.get(product=current_product, cart=cart)
-        cart_item.quantity += quantity # Jo quantity aayi wo add kar do
-        cart_item.save()
+        cart_item = CartItem.objects.get(product=product, cart=cart)
+        
+        # STOCK CHECK: Jitna stock hai usse jyada add na ho
+        if (cart_item.quantity + quantity) <= product.stock_quantity:
+            cart_item.quantity += quantity
+            cart_item.save()
+        else:
+            # Agar stock se jyada maang raha hai
+            return JsonResponse({'status': 'error', 'message': 'Stock khatam hone wala hai!'})
+            
     except CartItem.DoesNotExist:
-        cart_item = CartItem.objects.create(
-            product=current_product,
-            quantity=quantity,
-            cart=cart
-        )
-        cart_item.save()
+        # Naya item tabhi banao agar stock available ho
+        if quantity <= product.stock_quantity:
+            cart_item = CartItem.objects.create(
+                product=product,
+                quantity=quantity,
+                cart=cart
+            )
+            cart_item.save()
+        else:
+            return JsonResponse({'status': 'error', 'message': 'Out of Stock!'})
     
-    # 4. Cart Count update karo
+    # 5. Cart Count update karo
     cart_count = CartItem.objects.filter(cart=cart).count()
 
-    # 5. JSON Return karo (Page refresh nahi hoga)
+    # 6. JSON Return karo
     return JsonResponse({
         'status': 'success', 
         'message': 'Product added successfully', 
         'cart_count': cart_count
     })
+
 
 # --- 2. CART DETAILS (Database Wala) ---
 # store/views.py
@@ -478,6 +495,8 @@ def checkout(request):
                 # Stock Minus Logic
                 product = item.product
                 product.stock_quantity -= item.quantity
+                # 👇 YE NAYI LINE JOD DE (Sold Badhane ke liye)
+                product.total_sold += item.quantity
                 product.save()
 
             # 3. Cart Khali Karo (Database se item uda do)

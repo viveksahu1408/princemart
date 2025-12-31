@@ -12,11 +12,14 @@ admin.site.register(Category)
 
 # Product
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ('name', 'category', 'selling_price', 'stock_quantity', 'unit','stock_status')
+    list_display = ('name', 'category', 'selling_price', 'stock_quantity', 'unit','stock_status','total_sold',)
     search_fields = ('name','category__name',)
 
     # Filter: Client side me dekh sakega ki "Low Stock" wale dikhao
     list_filter = ('category',)
+
+    # Isse tu sort bhi kar payega (Sabse jyada bikne wala upar)
+    ordering = ('-total_sold',)
     
     # POWERFUL FEATURE: List ke bahar se hi Stock edit karne ki suvidha
     list_editable = ('stock_quantity', 'selling_price')

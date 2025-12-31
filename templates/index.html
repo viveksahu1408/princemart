@@ -84,6 +84,7 @@
     {% for product in products %}
     <div class="col-6 col-md-3">
         <div class="card h-100 border-0 shadow-sm" style="border-radius: 12px;">
+            
             <div style="height: 140px; overflow: hidden; border-radius: 12px 12px 0 0; background: #f8f9fa; position: relative;">
                 {% if product.image %}
                 <img src="{{ product.image.url }}" class="card-img-top" alt="{{ product.name }}" style="width: 100%; height: 100%; object-fit: contain; padding: 10px;">
@@ -96,36 +97,63 @@
                 {% endif %}
             </div>
             
-            <div class="card-body p-2">
+            <div class="card-body p-2 d-flex flex-column">
                 <h6 class="card-title text-truncate mb-1" style="font-size: 14px;">{{ product.name }}</h6>
-                <p class="text-muted small mb-1" style="font-size: 12px;">{{ product.unit }}</p>
-<div class="mb-2">
-    {% if product.market_price > product.selling_price %}
-        <span class="text-muted text-decoration-line-through small">₹{{ product.market_price }}</span>
-        <span class="fw-bold text-dark ms-1">₹{{ product.selling_price }}</span>
-        <span class="badge bg-success ms-1" style="font-size: 10px;">{{ product.get_discount_percentage }}% OFF</span>
-    {% else %}
-        <span class="fw-bold text-dark">₹{{ product.selling_price }}</span>
-    {% endif %}
-</div>
-                {% if product.stock_quantity > 0 %}
+                
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <p class="text-muted small mb-0" style="font-size: 12px;">{{ product.unit }}</p>
+                    
+                    {% if product.total_sold > 0 %}
+                    <!-- <span class="badge bg-light text-success border" style="font-size: 9px;">
+                         {{ product.total_sold }} Sold 🔥
+                    </span> -->
+                    {% endif %}
+                </div>
+
+                <div class="mb-2">
+                    {% if product.market_price > product.selling_price %}
+                        <span class="text-muted text-decoration-line-through small">₹{{ product.market_price }}</span>
+                        <span class="fw-bold text-dark ms-1">₹{{ product.selling_price }}</span>
+                        <span class="badge bg-success ms-1" style="font-size: 10px;">{{ product.get_discount_percentage }}% OFF</span>
+                    {% else %}
+                        <span class="fw-bold text-dark">₹{{ product.selling_price }}</span>
+                    {% endif %}
+                </div>
+                <div class="mt-auto">
+    {% if product.stock_quantity > 0 %}
+    
     <div class="row g-1 align-items-center">
-        <div class="col-4">
-            <input type="number" name="quantity" value="1" min="1" max="{{ product.stock_quantity }}" class="form-control text-center p-0" style="font-size: 14px; height: 30px;">
+        <div class="col-5">
+            <div class="input-group input-group-sm">
+                <button class="btn btn-outline-secondary px-1" type="button" 
+                        onclick="changeQty('{{ product.id }}', -1)">-</button>
+                
+                <input type="text" id="qty-{{ product.id }}" class="form-control text-center px-1" 
+                       value="1" readonly style="background: white;">
+                
+                <button class="btn btn-outline-success px-1" type="button" 
+                        onclick="changeQty('{{ product.id }}', 1, {{ product.stock_quantity }})">+</button>
+            </div>
         </div>
-        
-        <div class="col-8">
-            <button type="button" class="add-to-cart-btn btn btn-primary w-100" data-url="{% url 'add_to_cart' product.id %}">
-                Add
+
+        <div class="col-7">
+            <button onclick="addToCart('{{ product.id }}', '{% url 'add_to_cart' product.id %}')" 
+                    class="btn btn-primary btn-sm w-100">
+                Add <i class="fas fa-shopping-cart"></i>
             </button>
         </div>
     </div>
-{% else %}
-    <button class="btn btn-sm btn-secondary w-100" disabled>
-        Out of Stock
-    </button>
-{% endif %}
-                </div>
+
+    {% else %}
+        <button class="btn btn-sm btn-secondary w-100" disabled>
+            Out of Stock
+        </button>
+    {% endif %}
+</div>
+                
+          
+
+            </div>
         </div>
     </div>
     {% endfor %}
@@ -133,4 +161,73 @@
 
 <div style="height: 80px;"></div>
 
+<script>
+    // 1. Quantity Kam/Jyada karne ka function (Server pe nahi jayega)
+    function changeQty(productId, change, maxStock) {
+        let inputField = document.getElementById('qty-' + productId);
+        let currentQty = parseInt(inputField.value);
+        let newQty = currentQty + change;
+
+        // Validation: 1 se kam nahi hona chahiye
+        if (newQty < 1) return;
+        
+        // Validation: Stock se jyada nahi hona chahiye (Agar maxStock diya hai)
+        if (maxStock && newQty > maxStock) {
+            alert("Sorry, bas itna hi stock bacha hai!");
+            return;
+        }
+
+        inputField.value = newQty;
+    }
+
+    // 2. Final Cart me Add karne ka function
+    function addToCart(productId, baseUrl) {
+        // Input box se current number nikalo
+        let qty = document.getElementById('qty-' + productId).value;
+
+        // URL me quantity jod do (Example: /add-to-cart/5/?quantity=3)
+        let finalUrl = `${baseUrl}?quantity=${qty}`;
+
+        // Fetch request bhejo (AJAX)
+        fetch(finalUrl)
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                // Cart Badge Update karo
+                let cartBadge = document.getElementById('cart-count');
+                if (cartBadge) {
+                    cartBadge.innerText = data.cart_count;
+                }
+                
+                // User ko batao ki add ho gaya (Optional)
+                // alert("Added " + qty + " items to cart!"); 
+                
+                // Quantity wapas 1 kar do (Optional)
+                document.getElementById('qty-' + productId).value = 1;
+                
+            } else {
+                alert("Error: " + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    }
+</script>
+
 {% endblock %}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -22,6 +22,8 @@ class Product(models.Model):
     # Ye naya field hai (MRP)
     market_price = models.DecimalField(default=0, max_digits=10, decimal_places=2, help_text="MRP (Kata hua rate)")
 
+    #total kitna bika record
+    total_sold = models.IntegerField(default=0, help_text="Ab tak kitne bike")
     # Paisa aur Munafa
     cost_price = models.DecimalField(default=0, max_digits=10, decimal_places=2, help_text="Khareed Rate")
     selling_price = models.DecimalField(default=0, max_digits=10, decimal_places=2, help_text="Bechne ka Rate")
