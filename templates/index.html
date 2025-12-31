@@ -122,9 +122,9 @@
                 <div class="mt-auto">
     {% if product.stock_quantity > 0 %}
     
-    <div class="row g-1 align-items-center">
-    <div class="col-7 col-sm-6 col-md-5">
-        <!-- input-group-sm hata diya, normal ya custom size use kar rahe hain -->
+   <!-- Quantity selector upar full width -->
+<div class="row g-2 mb-2">
+    <div class="col-12">
         <div class="input-group input-group-custom-qty">
             <button class="btn btn-outline-secondary qty-btn" type="button" 
                     onclick="changeQty('{{ product.id }}', -1)">-</button>
@@ -136,13 +136,20 @@
                     onclick="changeQty('{{ product.id }}', 1, {{ product.stock_quantity }})">+</button>
         </div>
     </div>
+</div>
 
-    <div class="col-5 col-sm-6 col-md-7">
+<!-- Add button neeche full width -->
+<div class="row g-2">
+    <div class="col-12">
         <button onclick="addToCart('{{ product.id }}', '{% url 'add_to_cart' product.id %}')" 
-                class="btn btn-primary btn-sm w-100">
-            Add <i class="fas "></i>
+                class="btn btn-primary w-100 add-btn-height">
+            Add
+            <i class="fas fa-cart-plus"></i>
+            <!-- Icon chahiye to ye add kar dena -->
+            <!-- <i class="fas fa-cart-plus ms-2"></i> -->
         </button>
     </div>
+
 </div>
 
     {% else %}
