@@ -162,49 +162,47 @@
 <div style="height: 80px;"></div>
 
 <script>
-    // 1. Quantity Kam/Jyada karne ka function (Server pe nahi jayega)
+    // 1. Quantity change logic (Same as before)
     function changeQty(productId, change, maxStock) {
         let inputField = document.getElementById('qty-' + productId);
         let currentQty = parseInt(inputField.value);
         let newQty = currentQty + change;
 
-        // Validation: 1 se kam nahi hona chahiye
         if (newQty < 1) return;
-        
-        // Validation: Stock se jyada nahi hona chahiye (Agar maxStock diya hai)
         if (maxStock && newQty > maxStock) {
             alert("Sorry, bas itna hi stock bacha hai!");
             return;
         }
-
         inputField.value = newQty;
     }
 
-    // 2. Final Cart me Add karne ka function
+    // 2. Add to Cart Logic with TOAST message
     function addToCart(productId, baseUrl) {
-        // Input box se current number nikalo
         let qty = document.getElementById('qty-' + productId).value;
-
-        // URL me quantity jod do (Example: /add-to-cart/5/?quantity=3)
         let finalUrl = `${baseUrl}?quantity=${qty}`;
 
-        // Fetch request bhejo (AJAX)
         fetch(finalUrl)
         .then(response => response.json())
         .then(data => {
             if (data.status === 'success') {
-                // Cart Badge Update karo
+                
+                // A. Badge Update karo
                 let cartBadge = document.getElementById('cart-count');
                 if (cartBadge) {
                     cartBadge.innerText = data.cart_count;
                 }
+
+                // B. 👇 TOAST DIKHAO (Magic starts here)
+                let toastMessage = document.getElementById('toast-message');
+                toastMessage.innerText = data.message; // "Product added successfully"
+
+                let toastElement = document.getElementById('cartToast');
+                let toast = new bootstrap.Toast(toastElement); // Bootstrap ka magic
+                toast.show();
                 
-                // User ko batao ki add ho gaya (Optional)
-                // alert("Added " + qty + " items to cart!"); 
-                
-                // Quantity wapas 1 kar do (Optional)
+                // C. Quantity reset (Optional)
                 document.getElementById('qty-' + productId).value = 1;
-                
+
             } else {
                 alert("Error: " + data.message);
             }
