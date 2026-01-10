@@ -2,6 +2,26 @@ from django.db import models
 from django.contrib.auth.models import User
 import datetime
 
+# --- KATNI AREA LIST (Dropdown ke liye) ---
+KATNI_AREAS = (
+    ('mansarovar', 'Man Sarovar'),
+    ('post_office_camp', 'Post Office Camp'),
+    ('shubh_city', 'Shubh City'),
+    ('chawala_chowk', 'Chawala Chowk'),
+    ('shani_mandir_camp', 'Shani Mandir Camp'),
+    ('hospital_line', 'Hospital Line'),
+    ('adm_line', 'ADM Line'),
+    ('gram_panchayat', 'Gram Panchayat'),
+    ('bangla_line', 'Bangla Line'),
+    ('audinance_factory', 'Audinance Factory'),
+    ('keren_line', 'Keren Line'),
+    ('samdariya_colony', 'Samdariya Colony'),
+    ('mes', 'MES'),
+    ('sabji_mandi_camp', 'Sabji Mandi Camp'),
+    ('shanti_nagar', 'Shanti Nagar'),
+    # Aur jo areas client bole yahan add kar dena
+)
+
 # 1. Category (Samaan ki list)
 class Category(models.Model):
     name = models.CharField(max_length=50)
@@ -19,11 +39,12 @@ class Product(models.Model):
     name = models.CharField(max_length=100)
     description = models.TextField(default='', blank=True, null=True)
     
-    # Ye naya field hai (MRP)
+    # MRP Field
     market_price = models.DecimalField(default=0, max_digits=10, decimal_places=2, help_text="MRP (Kata hua rate)")
 
-    #total kitna bika record
+    # Total Sold Record
     total_sold = models.IntegerField(default=0, help_text="Ab tak kitne bike")
+    
     # Paisa aur Munafa
     cost_price = models.DecimalField(default=0, max_digits=10, decimal_places=2, help_text="Khareed Rate")
     selling_price = models.DecimalField(default=0, max_digits=10, decimal_places=2, help_text="Bechne ka Rate")
@@ -52,7 +73,7 @@ class Product(models.Model):
     def __str__(self):
         return self.name
 
-# --- (Cart System ke liye) ---
+# --- (Cart System) ---
 class Cart(models.Model):
     cart_id = models.CharField(max_length=250, blank=True)
     date_added = models.DateField(auto_now_add=True)
@@ -69,22 +90,27 @@ class CartItem(models.Model):
     def __str__(self):
         return self.product.name
     
-    # Cart item ka total (Price * Qty) nikalne ke liye
     @property
     def total(self):
         return self.product.selling_price * self.quantity
 
-
-# store/models.py
-
+# --- 3. Order Model (UPDATED) ---
 class Order(models.Model):
-    # 👇 YE LINE MISSING THI (Isse jodo) 👇
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     
     customer_name = models.CharField(max_length=50)
     customer_phone = models.CharField(max_length=15)
-    customer_address = models.TextField(blank=True) 
     
+    # --- YAHAN CHANGE KIYA HAI (Address Section) ---
+    
+    # 1. Dropdown (Area Select karo)
+    area = models.CharField(max_length=100, choices=KATNI_AREAS, default='mansarovar', help_text="Area Select Karein")
+    
+    # 2. Text Box (Ghar ka number, Gali number likho)
+    address_details = models.TextField(blank=True, help_text="House No, Gali No, Landmark") 
+    
+    # -----------------------------------------------
+
     date = models.DateField(default=datetime.datetime.today)
     total_amount = models.DecimalField(default=0, max_digits=10, decimal_places=2)
     
@@ -111,11 +137,10 @@ class OrderItem(models.Model):
     def __str__(self):
         return f"{self.quantity} x {self.product.name}"
 
-    # --- YE FUNCTION ADD KAR 👇 ---
     def get_cost(self):
         return self.price * self.quantity
 
-# 2. Naya Model: Banner (Offer Slider ke liye)
+# 5. Banner (Offer Slider)
 class Banner(models.Model):
     title = models.CharField(max_length=100, blank=True)
     image = models.ImageField(upload_to='uploads/banners/')
@@ -124,21 +149,19 @@ class Banner(models.Model):
     def __str__(self):
         return self.title        
 
-#this is for notification to admin and users both
+# 6. Notification System
 class Notification(models.Model):
     title = models.CharField(max_length=100)
     message = models.TextField()
     date = models.DateTimeField(auto_now_add=True)
     
     # Kiske liye hai?
-    for_admin = models.BooleanField(default=False) # True = Admin ke liye (New Order)
-    for_user_phone = models.CharField(max_length=15, null=True, blank=True) # Null = Sabke liye (Broadcast Offer)
+    for_admin = models.BooleanField(default=False) 
+    for_user_phone = models.CharField(max_length=15, null=True, blank=True) 
     
-    # Click karne pe kahan jaye?
+    # Link
     link = models.CharField(max_length=200, blank=True, null=True)
-    
     is_read = models.BooleanField(default=False)
 
     def __str__(self):
         return self.title
-

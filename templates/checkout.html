@@ -12,12 +12,12 @@
                     {% csrf_token %}
                     
                     <div class="mb-3">
-                        <label class="form-label">Naam</label>
+                        <label class="form-label fw-bold">Naam</label>
                         {{ form.customer_name }}
                     </div>
                     
                     <div class="mb-3">
-                        <label class="form-label">Mobile Number</label>
+                        <label class="form-label fw-bold">Mobile Number</label>
                         {{ form.customer_phone }}
                     </div>
 
@@ -25,12 +25,12 @@
                         <label class="form-label fw-bold mb-2">Order kaise chahiye?</label>
                         <div class="d-flex gap-4">
                             {% for radio in form.delivery_mode %}
-                            <div class="form-check">
-                                {{ radio.tag }}
-                                <label class="form-check-label" for="{{ radio.id_for_label }}">
-                                    {{ radio.choice_label }}
-                                </label>
-                            </div>
+                                <div class="form-check">
+                                    {{ radio.tag }}
+                                    <label class="form-check-label" for="{{ radio.id_for_label }}">
+                                        {{ radio.choice_label }}
+                                    </label>
+                                </div>
                             {% endfor %}
                         </div>
                         <small class="text-muted mt-2 d-block" style="font-size: 12px;">
@@ -39,8 +39,13 @@
                     </div>
                     
                     <div class="mb-3">
-                        <label class="form-label">Address</label>
-                        {{ form.customer_address }}
+                        <label class="form-label fw-bold">Area Select Karein (Katni)</label>
+                        {{ form.area }}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Pura Pata (Ghar No., Gali No., Landmark)</label>
+                        {{ form.address_details }}
                     </div>
 
                     <button type="submit" class="btn btn-success w-100 py-2 mt-3 fw-bold">

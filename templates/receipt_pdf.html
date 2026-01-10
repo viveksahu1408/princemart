@@ -2,150 +2,214 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Receipt</title>
+    <title>Order Receipt - Prince Mart</title>
     <style>
         @page {
-            size: 58mm 200mm; /* Width 58mm, Height 200mm (lamba page) */
-            margin: 2mm;
+            size: 100mm;                    /* 4-inch width – height automatic (thermal roll ke liye best) */
+            margin: 4mm 3mm 10mm 3mm;       /* top right bottom left – bottom extra for cutting */
+        }
+
+        * {
+            box-sizing: border-box;
         }
 
         body {
-            font-family: Helvetica, sans-serif; /* Simple Font */
-            font-size: 11px;
+            font-family: 'Helvetica', 'Arial', sans-serif;
+            font-size: 12px;
             color: #000;
-            background: #fff;
-            margin: 2mm;
+            margin: 0;
+            padding: 0;
+            line-height: 1.35;
+        }
+
+        .container {
+            width: 94mm;                    /* safe printing width */
+            max-width: 94mm;
+            margin: 0 auto;
         }
 
         .header {
             text-align: center;
-            margin-bottom: 5px;
+            padding: 6px 0 8px;
         }
 
-        .header h2 {
-            margin: 0;
-            font-size: 14px;
+        .store-name {
+            font-size: 20px;
             font-weight: bold;
+            color: #e67e22;
             text-transform: uppercase;
+            letter-spacing: 1px;
+            margin: 0 0 3px;
         }
 
-        .header p {
-            margin: 0;
+        .store-info {
             font-size: 10px;
+            margin: 1px 0;
         }
 
-        .divider {
-            border-bottom: 1px dashed #000;
-            margin: 5px 0;
-            width: 100%;
+        .mode {
+            font-size: 12px;
+            font-weight: bold;
+            margin: 8px 0 4px;
+            text-align: center;
         }
 
-        .info {
-            font-size: 10px;
+        .highlight-pickup {
+            background: #ffeb3b;
+            padding: 2px 6px;
+            border: 1px solid #000;
+            border-radius: 3px;
+        }
+
+        hr {
+            border: none;
+            border-top: 1px dashed #000;
+            margin: 6px 0;
+        }
+
+        .customer-section {
+            margin: 6px 0;
+        }
+
+        .customer-row {
+            font-size: 11px;
+            margin: 2px 0;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 5px;
+            margin: 6px 0 4px;
+            font-size: 11px;
         }
 
         th {
             text-align: left;
-            font-size: 10px;
-            border-bottom: 1px solid #000;
-            padding-bottom: 2px;
+            padding: 4px 2px;
+            border-bottom: 1.5px solid #000;
+            font-weight: bold;
         }
 
         td {
-            font-size: 10px;
-            padding: 2px 0;
+            padding: 4px 2px;
             vertical-align: top;
         }
 
-        .qty-col {
-            text-align: center;
-            width: 15%;
-        }
+        .col-item   { width: 55%; }
+        .col-qty    { width: 12%; text-align: center; }
+        .col-total  { width: 33%; text-align: right; }
 
-        .price-col {
-            text-align: right;
-            width: 25%;
-        }
-
-        .item-col {
-            width: 60%;
+        .item-detail {
+            font-size: 9.5px;
+            color: #555;
         }
 
         .total-section {
-            margin-top: 5px;
             text-align: right;
-            font-size: 12px;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
+        .grand-total {
+            font-size: 16px;
             font-weight: bold;
+            border-top: 2px solid #000;
+            padding-top: 6px;
+            margin-top: 6px;
         }
 
         .footer {
             text-align: center;
-            margin-top: 10px;
-            font-size: 9px;
+            font-size: 10px;
+            margin-top: 15px;
+            color: #444;
+        }
+
+        .extra-feed {
+            height: 12mm;   /* cutting ke liye extra space */
+        }
+
+        @media print {
+            body { margin: 0; padding: 0; }
         }
     </style>
 </head>
 <body>
 
+<div class="container">
+
     <div class="header">
-        <h2>Prince Mart</h2>
-        <p>Main Market, Katni</p>
-        <p>Mo: 7999182954</p>
+        <div class="store-name">PRINCE MART</div>
+        <div class="store-info">Main Market, Katni, MP - 483501</div>
+        <div class="store-info">Ph: 9300247194</div>
     </div>
 
-    <div class="divider"></div>
+    <hr>
 
-    <div class="info">
-        <strong>Order ID:</strong> #{{ order.id }}<br>
-        <strong>Date:</strong> {{ order.created_at|date:"d/m/y" }}<br>
-        <strong>Time:</strong> {{ order.created_at|date:"H:i" }}
+    <div class="mode">
+        Mode: 
+        {% if order.delivery_mode == 'Pickup' %}
+            <span class="highlight-pickup">SELF PICKUP (Dukaan se)</span>
+        {% else %}
+            HOME DELIVERY 🚚
+        {% endif %}
     </div>
 
-    <div class="divider"></div>
+    <hr>
+
+    <div class="customer-section">
+        <div class="customer-row"><strong>Order ID:</strong> #{{ order.id }}</div>
+        <div class="customer-row"><strong>Date:</strong> {{ order.date|date:"d M, Y" }}</div>
+        <div class="customer-row"><strong>Name:</strong> {{ order.customer_name }}</div>
+        <div class="customer-row"><strong>Phone:</strong> {{ order.customer_phone }}</div>
+        
+        {% if order.address_details %}
+        <div class="customer-row" style="margin-top:4px;">
+            <strong>Address:</strong><br>
+            {{ order.address_details|linebreaksbr }}
+            <span style="font-weight:bold;">({{ order.get_area_display }})</span>
+        </div>
+        {% endif %}
+    </div>
+
+    <hr>
 
     <table>
         <thead>
             <tr>
-                <th class="item-col">Item</th>
-                <th class="qty-col">Qty</th>
-                <th class="price-col">Amt</th>
+                <th class="col-item">Item</th>
+                <th class="col-qty">Qty</th>
+                <th class="col-total">Total</th>
             </tr>
         </thead>
         <tbody>
-            {% for item in order_items %}
+            {% for item in order.orderitem_set.all %}
             <tr>
-                <td class="item-col">
+                <td class="col-item">
                     {{ item.product.name }}
-                    <br>
-                    <span style="font-size:8px; color:#333;">
-                        ( Rs.{{ item.product.selling_price }})
-                    </span>
+                    <div class="item-detail">(Rs. {{ item.price|floatformat:0 }} each)</div>
                 </td>
-                <td class="qty-col">{{ item.quantity }}</td>
-                <td class="price-col">{{ item.get_cost|stringformat:".0f" }}</td>
+                <td class="col-qty">{{ item.quantity }}</td>
+                <td class="col-total">Rs. {{ item.get_cost|floatformat:0 }}</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 
-    <div class="divider"></div>
-
     <div class="total-section">
-        Total: Rs. {{ order.total_amount }}
+        <div class="grand-total">
+            Grand Total: Rs. {{ order.total_amount|floatformat:0 }}
+        </div>
     </div>
-
-    <div class="divider"></div>
 
     <div class="footer">
-        <p>Thank You!</p>
-        <p>Visit Again</p>
+        *** Thank You! Visit Again ***<br>
+        Computer Generated Receipt
     </div>
+
+    <div class="extra-feed"></div>
+
+</div>
 
 </body>
 </html>

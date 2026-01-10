@@ -545,7 +545,7 @@ def my_orders(request):
             customer_info = {
                 'name': latest_order.customer_name,
                 'phone': latest_order.customer_phone,
-                'address': latest_order.customer_address
+                'address': f"{latest_order.address_details}, {latest_order.get_area_display()}"                
             }
 
     context = {

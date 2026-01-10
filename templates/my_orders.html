@@ -13,7 +13,10 @@
                 <div>
                     <h5 class="mb-0 fw-bold">{{ customer.name|default:"Guest User" }}</h5>
                     <p class="mb-0 small opacity-75">+91 {{ customer.phone }}</p>
-                    <p class="mb-0 small opacity-75"><i class="fas fa-map-marker-alt me-1"></i> {{ customer.address|default:"Address not found" }}</p>
+                    <p class="mb-0 small opacity-75">
+                        <i class="fas fa-map-marker-alt me-1"></i> 
+                        {{ customer.address|default:"Address not updated" }}
+                    </p>
                 </div>
             </div>
         </div>
@@ -29,9 +32,9 @@
                     <small class="text-muted ms-2">{{ order.date }}</small>
                 </div>
                 
-                <a href="{% url 'order_invoice' order.id %}" class="btn btn-sm btn-outline-primary" title="Download Bill">
-                    <i class="fas fa-file-invoice"></i> Bill
-                </a>
+
+                <a href="{% url 'order_invoice' order.id %}" class="btn btn-sm btn-outline-primary" title="Download Bill"> <i class="fas fa-file-invoice"></i> Bill </a>
+                
             </div>
 
             <div class="card-body">
@@ -53,13 +56,15 @@
                         <span class="badge bg-warning text-dark">On the Way</span>
                     {% endif %}
                 </div>
-            </div>
+                
+                </div>
         </div>
         {% endfor %}
     {% else %}
         <div class="text-center py-5">
             <i class="fas fa-shopping-basket text-muted mb-3" style="font-size: 50px;"></i>
             <p>Abhi tak koi order nahi kiya.</p>
+            <a href="/" class="btn btn-primary btn-sm">Shop Now</a>
         </div>
     {% endif %}
 </div>

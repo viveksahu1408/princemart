@@ -30,7 +30,8 @@
         <strong>Bill To:</strong><br>
         Name: {{ order.customer_name }}<br>
         Phone: {{ order.customer_phone }}<br>
-        Address: {{ order.customer_address }}<br>
+        Address: {{ order.address_details }} 
+                {{ order.get_area_display }}<br>
         Date: {{ order.date }} | Order ID: #{{ order.id }}
     </div>
 
