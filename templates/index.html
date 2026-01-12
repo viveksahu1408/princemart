@@ -98,15 +98,15 @@
             </div>
             
             <div class="card-body p-2 d-flex flex-column">
-                <h6 class="card-title text-truncate mb-1" style="font-size: 14px;">{{ product.name }}</h6>
+                
+                <h6 class="card-title mb-1" style="font-size: 14px; line-height: 1.4;">
+                    {{ product.name }}
+                </h6>
                 
                 <div class="d-flex justify-content-between align-items-center mb-1">
                     <p class="text-muted small mb-0" style="font-size: 12px;">{{ product.unit }}</p>
                     
                     {% if product.total_sold > 0 %}
-                    <!-- <span class="badge bg-light text-success border" style="font-size: 9px;">
-                         {{ product.total_sold }} Sold 🔥
-                    </span> -->
                     {% endif %}
                 </div>
 
@@ -119,45 +119,41 @@
                         <span class="fw-bold text-dark">₹{{ product.selling_price }}</span>
                     {% endif %}
                 </div>
+
                 <div class="mt-auto">
-    {% if product.stock_quantity > 0 %}
-    
-   <!-- Quantity selector upar full width -->
-<div class="row g-2 mb-2">
-    <div class="col-12">
-        <div class="input-group input-group-custom-qty">
-            <button class="btn btn-outline-secondary qty-btn" type="button" 
-                    onclick="changeQty('{{ product.id }}', -1)">-</button>
-            
-            <input type="text" id="qty-{{ product.id }}" class="form-control text-center qty-input" 
-                   value="1" readonly style="background: white;">
-            
-            <button class="btn btn-outline-success qty-btn" type="button" 
-                    onclick="changeQty('{{ product.id }}', 1, {{ product.stock_quantity }})">+</button>
-        </div>
-    </div>
-</div>
+                    {% if product.stock_quantity > 0 %}
+                    
+                    <div class="row g-2 mb-2">
+                        <div class="col-12">
+                            <div class="input-group input-group-custom-qty">
+                                <button class="btn btn-outline-secondary qty-btn" type="button" 
+                                        onclick="changeQty('{{ product.id }}', -1)">-</button>
+                                
+                                <input type="text" id="qty-{{ product.id }}" class="form-control text-center qty-input" 
+                                       value="1" readonly style="background: white;">
+                                
+                                <button class="btn btn-outline-success qty-btn" type="button" 
+                                        onclick="changeQty('{{ product.id }}', 1, {{ product.stock_quantity }})">+</button>
+                            </div>
+                        </div>
+                    </div>
 
-<!-- Add button neeche full width -->
-<div class="row g-2">
-    <div class="col-12">
-        <button onclick="addToCart('{{ product.id }}', '{% url 'add_to_cart' product.id %}')" 
-                class="btn btn-primary w-100 add-btn-height">
-            Add
-            <i class="fas fa-cart-plus"></i>
-            <!-- Icon chahiye to ye add kar dena -->
-            <!-- <i class="fas fa-cart-plus ms-2"></i> -->
-        </button>
-    </div>
+                    <div class="row g-2">
+                        <div class="col-12">
+                            <button onclick="addToCart('{{ product.id }}', '{% url 'add_to_cart' product.id %}')" 
+                                    class="btn btn-primary w-100 add-btn-height">
+                                Add
+                                <i class="fas fa-cart-plus"></i>
+                            </button>
+                        </div>
+                    </div>
 
-</div>
-
-    {% else %}
-        <button class="btn btn-sm btn-secondary w-100" disabled>
-            Out of Stock
-        </button>
-    {% endif %}
-</div>
+                    {% else %}
+                        <button class="btn btn-sm btn-secondary w-100" disabled>
+                            Out of Stock
+                        </button>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>
@@ -167,7 +163,6 @@
 <div style="height: 80px;"></div>
 
 <script>
-    // 1. Quantity change logic (Same as before)
     function changeQty(productId, change, maxStock) {
         let inputField = document.getElementById('qty-' + productId);
         let currentQty = parseInt(inputField.value);
@@ -181,7 +176,6 @@
         inputField.value = newQty;
     }
 
-    // 2. Add to Cart Logic with TOAST message
     function addToCart(productId, baseUrl) {
         let qty = document.getElementById('qty-' + productId).value;
         let finalUrl = `${baseUrl}?quantity=${qty}`;
@@ -191,21 +185,18 @@
         .then(data => {
             if (data.status === 'success') {
                 
-                // A. Badge Update karo
                 let cartBadge = document.getElementById('cart-count');
                 if (cartBadge) {
                     cartBadge.innerText = data.cart_count;
                 }
 
-                // B. 👇 TOAST DIKHAO (Magic starts here)
                 let toastMessage = document.getElementById('toast-message');
-                toastMessage.innerText = data.message; // "Product added successfully"
+                toastMessage.innerText = data.message; 
 
                 let toastElement = document.getElementById('cartToast');
-                let toast = new bootstrap.Toast(toastElement); // Bootstrap ka magic
+                let toast = new bootstrap.Toast(toastElement); 
                 toast.show();
                 
-                // C. Quantity reset (Optional)
                 document.getElementById('qty-' + productId).value = 1;
 
             } else {
@@ -219,18 +210,3 @@
 </script>
 
 {% endblock %}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
