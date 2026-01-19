@@ -53,10 +53,28 @@ class OrderItemInline(admin.TabularInline):
     extra = 0
     
 class OrderAdmin(admin.ModelAdmin):
+
+    #fuction address add karne ke liye 19/01/2025
+    def formatted_address(self, obj):
+        # obj ka matlab hai current order
+        # Agar address details aur area dono hain to jod kar dikhao
+        if obj.address_details and obj.area:
+            return f"{obj.address_details}, {obj.get_area_display()}"
+        elif obj.address_details:
+            return obj.address_details
+        else:
+            return "Address Not Provided"
+        
+    # Column ka naam 'Customer Address' dikhega admin me
+    formatted_address.short_description = 'Customer Address'
+
     # 'order_actions' list me hona jaruri hai tabhi button dikhenge
-    list_display = ('id', 'customer_name', 'total_amount', 'status','is_paid', 'order_actions') 
+    list_display = ('id', 'customer_name','formatted_address', 'total_amount', 'status','is_paid', 'order_actions') 
     list_editable = ('status', 'is_paid') 
     
+    
+
+
     # --- YAHAN CHANGE KIYA HAI ---
     def order_actions(self, obj):
         return format_html(

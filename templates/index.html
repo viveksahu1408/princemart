@@ -63,8 +63,12 @@
                 {% endif %}
             </div>
             
-            <small class="d-block mt-1 {% if request.GET.category == cat.id|stringformat:'s' %}fw-bold text-primary{% endif %}">
+            <!-- <small class="d-block mt-1 {% if request.GET.category == cat.id|stringformat:'s' %}fw-bold text-primary{% endif %}">
                 {{ cat.name }}
+            </small> -->
+            <small class="d-block mt-1 mx-auto {% if request.GET.category == cat.id|stringformat:'s' %}fw-bold text-primary{% endif %}" 
+              style="width: 70px; word-wrap: break-word; white-space: normal; line-height: 1.2;">
+            {{ cat.name }}
             </small>
         </div>
     </a>
