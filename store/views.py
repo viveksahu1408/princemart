@@ -641,33 +641,26 @@ def admin_toggle_status(request, order_id):
     return redirect('admin_dashboard') # Wapas dashboard par bhej diya
 
 
-# --- 2. Thermal Receipt (Choti Machine ke liye) ---
+# --- 2. Thermal Receipt (Updated: No GST) ---
 def order_receipt_pdf(request, order_id):
     order = get_object_or_404(Order, id=order_id)
-    # Note: Maine yahan 'items' ka naam badal ke 'order_items' kar diya hai
-    # taaki jo HTML maine pehle diya tha usse match kare.
-    order_items = OrderItem.objects.filter(order=order) 
     
-    # Tax Calculation (Same logic jo tune likha hai)
-    try:
-        amount_without_tax = round(float(order.total_amount) / 1.18, 2)
-        tax_amount = round(float(order.total_amount) - amount_without_tax, 2)
-    except:
-        amount_without_tax = 0
-        tax_amount = 0
+    # HTML template me humne loop 'items' par chalaya tha: {% for item in items %}
+    # Isliye yahan variable ka naam 'items' rakhna jaruri hai
+    items = OrderItem.objects.filter(order=order) 
+    
+    # --- GST CALCULATION REMOVED ---
+    # Ab hume alag se tax calculate karne ki jarurat nahi hai.
+    # HTML me hum seedha order.total_amount dikha rahe hain.
 
     context = {
         'order': order,
-        'order_items': order_items, # Dhyan dena: HTML me humne 'order_items' use kiya hai
-        'amount_without_tax': amount_without_tax,
-        'tax_amount': tax_amount,
+        'items': items,  # HTML ke saath match karne ke liye key 'items' rakhi hai
         'today': datetime.date.today(),
     }
     
-    # YAHAN CHANGE HUA HAI: 
-    # Humne 'invoice.html' ki jagah naya 'receipt_pdf.html' lagaya hai
-    return render_to_pdf('receipt_pdf.html', context)
-
+    # Template ka naam wahi rakhna jo tumne banaya hai (invoice.html ya receipt_pdf.html)
+    return render_to_pdf('invoice.html', context)
 
 # --- Customer Search & Insights View ---
 @staff_member_required
