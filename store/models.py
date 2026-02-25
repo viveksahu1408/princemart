@@ -4,21 +4,21 @@ import datetime
 
 # --- KATNI AREA LIST (Dropdown ke liye) ---
 KATNI_AREAS = (
-    ('mansarovar', 'Man Sarovar'),
-    ('post_office_camp', 'Post Office Camp'),
-    ('shubh_city', 'Shubh City'),
-    ('chawala_chowk', 'Chawala Chowk'),
-    ('shani_mandir_camp', 'Shani Mandir Camp'),
-    ('hospital_line', 'Hospital Line'),
-    ('adm_line', 'ADM Line'),
-    ('gram_panchayat', 'Gram Panchayat'),
-    ('bangla_line', 'Bangla Line'),
-    ('audinance_factory', 'Audinance Factory'),
-    ('keren_line', 'Keren Line'),
-    ('samdariya_colony', 'Samdariya Colony'),
-    ('mes', 'MES'),
-    ('sabji_mandi_camp', 'Sabji Mandi Camp'),
-    ('shanti_nagar', 'Shanti Nagar'),
+    ('madhavnagar', 'Madhav Nagar'),
+    # ('post_office_camp', 'Post Office Camp'),
+    # ('shubh_city', 'Shubh City'),
+    # ('chawala_chowk', 'Chawala Chowk'),
+    # ('shani_mandir_camp', 'Shani Mandir Camp'),
+    # ('hospital_line', 'Hospital Line'),
+    # ('adm_line', 'ADM Line'),
+    # ('gram_panchayat', 'Gram Panchayat'),
+    # ('bangla_line', 'Bangla Line'),
+    # ('audinance_factory', 'Audinance Factory'),
+    # ('keren_line', 'Keren Line'),
+    # ('samdariya_colony', 'Samdariya Colony'),
+    # ('mes', 'MES'),
+    # ('sabji_mandi_camp', 'Sabji Mandi Camp'),
+    # ('shanti_nagar', 'Shanti Nagar'),
     # Aur jo areas client bole yahan add kar dena
 )
 
@@ -104,7 +104,7 @@ class Order(models.Model):
     # --- YAHAN CHANGE KIYA HAI (Address Section) ---
     
     # 1. Dropdown (Area Select karo)
-    area = models.CharField(max_length=100, choices=KATNI_AREAS, default='mansarovar', help_text="Area Select Karein")
+    area = models.CharField(max_length=100, choices=KATNI_AREAS, default='madhavnagar', help_text="Area Select Karein")
     
     # 2. Text Box (Ghar ka number, Gali number likho)
     address_details = models.TextField(blank=True, help_text="House No, Gali No, Landmark") 

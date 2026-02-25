@@ -1,0 +1,81 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <style>
+        body { font-family: Helvetica, sans-serif; font-size: 24px; color: #000; }
+        .header { text-align: center; margin-bottom: 5px; }
+        .store-name { font-size: 40px; font-weight: bold; color: #020100; }
+        
+        /* Table lines ko pakka karne ke liye changes niche hain */
+        .table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-top: 10px; 
+            border: 2px solid #000; /* Outer border solid black */
+        }
+        .table th, .table td { 
+            border: 1px solid #000; /* Har cell ki line solid black */
+            padding: 8px; 
+            text-align: left; 
+        }
+        .table th { background-color: #f2f2f2; }
+        .total-section { margin-top: 20px; text-align: right; font-size: 30px;}
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="store-name">YP-Mart</div>
+        <div>Main Market, Katni, MP - 483501</div>
+        <div>Phone: </div> 
+        
+        <h3>INVOICE</h3>
+        
+        <p><strong>Mode:</strong> 
+            {% if order.delivery_mode == 'Pickup' %}
+                <span style="background-color: yellow; padding: 2px 5px; border: 1px solid #000;">SELF PICKUP (Dukaan se lenge)</span>
+            {% else %}
+                Home Delivery
+            {% endif %}
+        </p>
+    </div>
+
+    <div style="margin-bottom: 15px;">
+        <strong>Bill To:</strong><br>
+        Name: {{ order.customer_name }}<br>
+        Phone: {{ order.customer_phone }}<br>
+        Address: {{ order.address_details }} 
+                {{ order.get_area_display }}<br>
+        Date: {{ order.date }} | Order ID: #{{ order.id }}
+    </div>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th style="width: 50%;">Item</th>
+                <th style="width: 12%;">Qty</th>
+                <th style="width: 15%;">Price</th>
+                <th style="width: 23%;">Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+            <td style="font-size: 30px; font-weight: bold;">{{ item.product.name }}</td>                <td>{{ item.quantity }}</td>
+                <td>{{ item.price }}</td>
+                <td>
+                    <strong>Rs. {{ item.get_cost|stringformat:".0f" }}</strong>
+                </td>
+            </tr>
+            {% endfor %}  
+        </tbody>
+    </table>
+
+    <div class="total-section">
+        <h3>Grand Total: Rs. {{ order.total_amount }}</h3>
+    </div>
+
+    <div style="margin-top: 50px; text-align: center; font-size: 25px;">
+        <p>Thank you for shopping with YP-Mart!</p>
+    </div>
+</body>
+</html>
