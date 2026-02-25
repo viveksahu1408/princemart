@@ -64,7 +64,7 @@
             
             <div class="d-flex align-items-start justify-content-center mt-2" style="height: 34px; overflow: hidden;">
                 <small class="text-center {% if request.GET.category == cat.id|stringformat:'s' %}fw-bold text-primary{% endif %}" 
-                    style="font-size: 12px; line-height: 1.1; white-space: normal; word-wrap: break-word; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
+                    style="font-size: 12px; line-height: 1.0; white-space: normal; word-wrap: break-word; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
                     {{ cat.name|upper }}
                 </small>
             </div>
