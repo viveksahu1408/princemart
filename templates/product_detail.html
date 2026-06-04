@@ -1,0 +1,227 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="container mt-0 px-3 mb-2 search-container-mobile" style="padding-top: 0px !important;">
+    <form action="{% url 'home' %}" method="GET" class="w-100">
+        <div class="input-group" style="box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-radius: 8px; overflow: hidden;">
+            <input type="text" name="search" class="form-control border-end-0 py-2 pl-3" placeholder="Saman dhoondhein... (Search products)" style="height: 44px; border-color: #ced4da; font-size: 14px;">
+            <button class="btn btn-warning border-start-0 px-3" type="submit" style="background-color: #f1c40f; color: #000; border-color: #ced4da;">
+                <i class="fas fa-search"></i>
+            </button>
+        </div>
+    </form>
+</div>
+
+<div class="container my-0 px-3 pt-1" style="color: #222222; background-color: #ffffff;">
+    <div class="row align-items-center">
+        <div class="col-md-6 text-center mb-3 mb-md-0 mt-1">
+            {% if product.image %}
+                <div style="background: #f8f9fa; padding: 10px; border-radius: 12px; border: 1px solid #e9ecef; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+                    <img id="main-product-image" src="{{ product.image.url }}" data-default-image="{{ product.image.url }}" alt="{{ product.name }}" class="img-fluid rounded" style="max-height: 300px; object-fit: contain;">
+                </div>
+            {% endif %}
+        </div>
+        
+        <div class="col-md-6">
+            <div class="mb-2">
+                <span class="badge" style="background-color: #fef9e7; color: #d4ac0d; font-weight: 600; border: 1px solid #f9e79f; padding: 6px 12px; font-size: 13px; border-radius: 6px;">
+                    📁 {{ product.category.name }}
+                </span>
+            </div>
+            
+            <h1 class="font-weight-bold mb-2" style="color: #111111; font-size: 24px; line-height: 1.3;">{{ product.name }}</h1>
+            
+            {% if product.description %}
+                <p class="mt-2 text-secondary" style="font-size: 15px; line-height: 1.6;">{{ product.description }}</p>
+            {% else %}
+                <p class="mt-2 text-muted" style="font-style: italic; font-size: 14px;">No description available for this product.</p>
+            {% endif %}
+            
+            <hr style="border-top: 1px solid #dee2e6; margin-top: 15px; margin-bottom: 15px;">
+
+            <div class="mt-3">
+                <div class="mb-4">
+                    <label class="font-weight-bold mb-2" style="color: #222222; font-size: 15px;">
+                        {% if product.variant_type == 'weight' %}
+                            Select Weight / Size (वजन चुनें):
+                        {% else %}
+                            Select Color / Rang (रंग चुनें):
+                        {% endif %}
+                    </label>
+                    
+                    <input type="hidden" id="selected-variant-id" value="{% if variants %}{{ variants.0.id }}{% endif %}">
+                    
+                    <div class="d-flex flex-wrap" style="gap: 10px;">
+                        {% for variant in variants %}
+                            <button type="button" 
+                                    class="btn variant-pill-btn {% if forloop.first %}active-variant{% else %}inactive-variant{% endif %}" 
+                                    data-variant-id="{{ variant.id }}" 
+                                    data-variant-image="{% if variant.image %}{{ variant.image.url }}{% endif %}" 
+                                    onclick="selectVariant(this, '{{ variant.id }}')">
+                                {% if product.variant_type == 'weight' %}
+                                    {{ variant.weight_or_size }}
+                                {% else %}
+                                    {{ variant.color }}
+                                {% endif %}
+                                <span class="d-block small font-weight-bold mt-1">₹{{ variant.selling_price }}</span>
+                                {% if variant.market_price > variant.selling_price %}
+                                    <del class="text-muted small" style="font-size: 11px;">₹{{ variant.market_price }}</del>
+                                {% endif %}
+                            </button>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="font-weight-bold mb-2" style="color: #222222; font-size: 15px;">Quantity (मात्रा):</label>
+                    <div class="d-flex align-items-center" style="max-width: 150px;">
+                        <button type="button" class="btn btn-outline-secondary px-3 py-2" onclick="changeQuantity('minus')" style="border-radius: 8px 0 0 8px; height: 45px; font-weight: bold;">-</button>
+                        <input type="number" id="qty-counter" value="1" min="1" readonly class="form-control text-center font-weight-bold" style="border-radius: 0; height: 45px; border-left: 0; border-right: 0; background-color: #fff; font-size: 16px;">
+                        <button type="button" class="btn btn-outline-secondary px-3 py-2" onclick="changeQuantity('plus')" style="border-radius: 0 8px 8px 0; height: 45px; font-weight: bold;">+</button>
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <button type="button" onclick="addToCartFromDetail('{{ product.id }}', '{% url 'add_to_cart' product.id %}')" class="btn btn-warning btn-lg font-weight-bold w-100 py-3" style="background-color: #f1c40f; color: #000000; border: none; border-radius: 8px; font-size: 16px; box-shadow: 0 3px 10px rgba(241,196,15,0.2);">
+                        🛒 Add To Cart
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-5 pt-4" style="border-top: 1px solid #e9ecef;">
+        <div class="col-12">
+            <h3 class="font-weight-bold mb-3" style="border-left: 4px solid #f1c40f; padding-left: 10px; color: #111111; font-size: 18px;">
+                Aapko Yeh Bhi Pasand Aa Sakta Hai
+            </h3>
+        </div>
+        <div class="row px-2">
+    {% for rel_product in related_products %}
+        <div class="col-md-3 col-6 mb-3 px-2 position-relative">
+            <div class="card h-100 product-light-card" style="background-color: #ffffff; border: 1px solid #e9ecef; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.04); cursor: pointer;">
+                
+                <div class="text-center p-2 d-flex align-items-center justify-content-center" style="background-color: #f8f9fa; height: 130px;">
+                    {% if rel_product.image %}
+                        <img src="{{ rel_product.image.url }}" class="card-img-top" alt="{{ rel_product.name }}" style="max-height: 110px; max-width: 100%; object-fit: contain;">
+                    {% endif %}
+                </div>
+                
+                <div class="card-body d-flex flex-column justify-content-between p-2 text-center">
+                    <h6 class="card-title font-weight-bold mb-1 text-dark" style="font-size: 13px; height: 36px; overflow: hidden; line-height: 1.4;">{{ rel_product.name }}</h6>
+                    <div>
+                        <p class="card-text font-weight-bold text-success mb-2" style="font-size: 14px;">₹{{ rel_product.selling_price }}</p>
+                        
+                        <a href="{% url 'product_detail' rel_product.id %}" class="btn btn-outline-secondary btn-sm w-100 py-1 stretched-link" style="border-radius: 6px; font-size: 12px; font-weight: 500;">
+                            View Details
+                        </a>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+    {% endfor %}
+</div>
+    </div>
+</div>
+
+<style>
+    .search-container-mobile { padding-top: 0px !important; margin-top: 0px !important; }
+    .variant-pill-btn { padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: 500; text-align: center; min-width: 85px; transition: all 0.2s ease; }
+    .active-variant { background-color: #fef9e7 !important; color: #d4ac0d !important; border: 2px solid #f1c40f !important; }
+    .inactive-variant { background-color: #ffffff !important; color: #495057 !important; border: 1px solid #ced4da !important; }
+    .product-light-card:hover { border-color: #ced4da !important; box-shadow: 0 4px 15px rgba(0,0,0,0.08) !important; }
+    @media (max-width: 576px) { .search-container-mobile { padding-top: 0px !important; margin-top: 0px !important; } }
+</style>
+
+<script>
+// Variant selection and image swap logic
+function selectVariant(element, variantId) {
+    let buttons = document.getElementsByClassName('variant-pill-btn');
+    for (let i = 0; i < buttons.length; i++) {
+        buttons[i].classList.remove('active-variant');
+        buttons[i].classList.add('inactive-variant');
+    }
+    element.classList.remove('inactive-variant');
+    element.classList.add('active-variant');
+    document.getElementById('selected-variant-id').value = variantId;
+
+    // --- Dynamic Image Change Logic ---
+    let mainImg = document.getElementById('main-product-image');
+    if (mainImg) {
+        let variantImgUrl = element.getAttribute('data-variant-image');
+        let defaultImgUrl = mainImg.getAttribute('data-default-image');
+        
+        // Agar variant ki alag image hai toh wo dikhao, nahi toh default main image lagao
+        if (variantImgUrl && variantImgUrl.trim() !== "") {
+            mainImg.src = variantImgUrl;
+        } else {
+            mainImg.src = defaultImgUrl;
+        }
+    }
+}
+
+// Pehle wale dynamic display setting ke liye automatic ek baar switch initial trigger run karne ke liye code
+document.addEventListener("DOMContentLoaded", function() {
+    let firstActiveBtn = document.querySelector('.variant-pill-btn.active-variant');
+    if (firstActiveBtn) {
+        let variantImgUrl = firstActiveBtn.getAttribute('data-variant-image');
+        let mainImg = document.getElementById('main-product-image');
+        if (mainImg && variantImgUrl && variantImgUrl.trim() !== "") {
+            mainImg.src = variantImgUrl;
+        }
+    }
+});
+
+function changeQuantity(operation) {
+    let qtyInput = document.getElementById('qty-counter');
+    let currentQty = parseInt(qtyInput.value);
+    if (operation === 'plus') { qtyInput.value = currentQty + 1; }
+    else if (operation === 'minus' && currentQty > 1) { qtyInput.value = currentQty - 1; }
+}
+
+function addToCartFromDetail(productId, baseUrl) {
+    let variantId = document.getElementById('selected-variant-id').value;
+    let qty = document.getElementById('qty-counter').value;
+    if (!variantId || variantId === "") { alert("Bhai pehle koi variant select kar lo!"); return; }
+    let finalUrl = `${baseUrl}?quantity=${qty}&variant_id=${variantId}`;
+    
+    fetch(finalUrl)
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            
+            // 1. Sabse pehle class wale saare badges ko ek sath update karo (Dono navbars ke liye)
+            let cartBadges = document.querySelectorAll('.cart-count-badge');
+            if (cartBadges.length > 0) {
+                cartBadges.forEach(badge => {
+                    badge.innerText = data.cart_count;
+                });
+            }
+
+            // 2. Fallback: Agar tumhare base.html me 'cart-count' naam ki purani ID chal rahi ho
+            let oldCartBadge = document.getElementById('cart-count');
+            if (oldCartBadge) {
+                oldCartBadge.innerText = data.cart_count;
+            }
+
+            // 3. Fallback 2: Direct specific IDs ko target karna safe rehne ke liye
+            let topBadge = document.getElementById('top-cart-count');
+            let bottomBadge = document.getElementById('bottom-cart-count');
+            if (topBadge) topBadge.innerText = data.cart_count;
+            if (bottomBadge) bottomBadge.innerText = data.cart_count;
+
+            // Toast/Alert system
+            let toastMessage = document.getElementById('toast-message');
+            if (toastMessage) { toastMessage.innerText = data.message; }
+            let toastElement = document.getElementById('cartToast');
+            if (toastElement) {
+                let toast = new bootstrap.Toast(toastElement); 
+                toast.show();
+            } else { alert(data.message); }
+        } else { alert("Error: " + data.message); }
+    })
+    .catch(error => { console.error('Error:', error); });
+}
+</script>
+{% endblock %}

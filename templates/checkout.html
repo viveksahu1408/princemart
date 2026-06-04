@@ -49,7 +49,14 @@
                     {% for item in cart_items %}
                     <li class="list-group-item d-flex justify-content-between lh-sm">
                         <div>
-                            <h6 class="my-0">{{ item.product.name }}</h6>
+                            <h6 class="my-0">
+                                {{ item.product.name }}
+                                {% if item.variant %}
+                                    <small class="text-primary d-block">
+                                        Variant: {% if item.variant.weight_or_size %}{{ item.variant.weight_or_size }}{% else %}{{ item.variant.color }}{% endif %}
+                                    </small>
+                                {% endif %}
+                            </h6>
                             <small class="text-muted">Qty: {{ item.quantity }}</small>
                         </div>
                         <span class="text-muted">₹{{ item.total }}</span>

@@ -18,6 +18,18 @@ from .models import Notification,Cart, CartItem # notification ke liye h
 from django.core.exceptions import ObjectDoesNotExist # Ye error handle karne ke liye
 from django.http import JsonResponse # Sabse upar ye import kar
 from django.contrib.auth.models import User
+# api vale 
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework import status
+from .models import Product, Category
+from .serializers import ProductSerializer, CategorySerializer
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework import status
+from .models import Product, ProductVariant, Cart, CartItem
+from .serializers import CartItemSerializer
+from .serializers import OrderHistorySerializer
 
 
 @staff_member_required # Sirf admin hi dekh payega
@@ -125,164 +137,7 @@ def home(request):
         'banners': banners, # Template me bheja
     }
     return render(request, 'index.html', context)
-'''
-# Cart Logic
-# Cart Logic (Updated)
-def add_to_cart(request, product_id):
-    if request.method == 'POST':
-        cart = request.session.get('cart', {})
-        product_id = str(product_id)
-        
-        # HTML form se quantity nikalo (Agar kuch nahi mila to 1 maan lo)
-        quantity = int(request.POST.get('quantity', 1))
-        
-        if product_id in cart:
-            cart[product_id] += quantity # Purani quantity me nayi jod do
-        else:
-            cart[product_id] = quantity # Naya item
-        
-        request.session['cart'] = cart
-        
-        # Ye hai wo popup message
-        messages.success(request, "Item cart me add ho gaya! 🛒")
-        
-        return redirect('home')
-    else:
-        return redirect('home')
 
-
-# caart details ke liye function
-
-def cart_details(request):
-    # 1. Session se cart nikalo
-    cart = request.session.get('cart', {})
-    
-    products = []
-    total_price = 0
-    total_items = 0
-
-    # 2. Database se products dhundho
-    for product_id, quantity in cart.items():
-        try:
-            product = Product.objects.get(id=product_id)
-            total = product.selling_price * quantity
-            
-            # List me dalo taaki template me dikha sakein
-            products.append({
-                'product': product,
-                'quantity': quantity,
-                'total': total
-            })
-            
-            total_price += total
-            total_items += quantity
-        except Product.DoesNotExist:
-            pass # Agar product delete ho gaya ho to ignore karo
-
-    context = {
-        'cart_products': products,
-        'total_price': total_price,
-        'total_items': total_items
-    }
-    return render(request, 'cart.html', context)    
-
-#cart update karne ke liye 
-def update_cart(request, product_id, action):
-    cart = request.session.get('cart', {})
-    product_id = str(product_id)
-    
-    if product_id in cart:
-        # Stock check karne ke liye product layenge
-        product = get_object_or_404(Product, id=product_id)
-        current_qty = cart[product_id]
-
-        if action == 'plus':
-            # Check karo stock hai ya nahi
-            if current_qty < product.stock_quantity:
-                cart[product_id] += 1
-            else:
-                messages.warning(request, f"Sorry, sirf {product.stock_quantity} pieces hi stock me hain.")
-        
-        elif action == 'minus':
-            if current_qty > 1:
-                cart[product_id] -= 1
-            else:
-                # Agar 1 se kam kiya to delete kar do
-                del cart[product_id]
-        
-        elif action == 'remove':
-            del cart[product_id]
-
-    request.session['cart'] = cart
-    return redirect('cart')    
-
-#checkout ka logic isme 
-# Checkout Logic
-def checkout(request):
-    cart = request.session.get('cart', {})
-    
-    # Agar cart khali hai to checkout pe mat aane do
-    if not cart:
-        messages.warning(request, "Cart khali hai bhai!")
-        return redirect('home')
-
-    # Total nikalne ka logic
-    cart_items = []
-    total_price = 0
-    for product_id, quantity in cart.items():
-        product = Product.objects.get(id=product_id)
-        total = product.selling_price * quantity
-        total_price += total
-        cart_items.append({'product': product, 'quantity': quantity, 'total': total})
-
-    # Form Submit hone par
-    if request.method == 'POST':
-        form = OrderForm(request.POST)
-        if form.is_valid():
-            # 1. Order create karo
-            order = form.save(commit=False)
-            order.total_amount = total_price
-            order.save()
-            request.session['customer_phone'] = order.customer_phone
-
-            #ye notifications ke liye 
-            Notification.objects.create(
-                title="🎉 New Order Received!",
-                message=f"{order.customer_name} ne order kiya hai (₹{order.total_amount}). Jaldi pack karo!",
-                for_admin=True,
-                link=f"/admin/store/order/{order.id}/change/" # Click karke seedha order page khulega
-            )
-
-            # 2. Cart items ko OrderItem me dalo aur Stock kam karo
-            for item in cart_items:
-                OrderItem.objects.create(
-                    order=order,
-                    product=item['product'],
-                    price=item['product'].selling_price,
-                    quantity=item['quantity']
-                )
-                
-                # Stock Minus Logic
-                product = item['product']
-                product.stock_quantity -= item['quantity']
-                product.save()
-
-            # 3. Cart khali kar do
-            request.session['cart'] = {}
-            
-            messages.success(request, "Order Place ho gaya! Jald hi delivery hogi. 🎉")
-            return redirect('home')
-            
-    else:
-        form = OrderForm()
-
-    context = {
-        'form': form,
-        'cart_items': cart_items,
-        'total_price': total_price
-    }
-    return render(request, 'checkout.html', context)    
-'''
 
 # --- HELPER FUNCTION (Cart ID nikalne ke liye) ---
 def _cart_id(request):
@@ -331,41 +186,58 @@ def _cart_id(request):
 #     })
 
 
+# =========================================================================
+# 1. ADD TO CART (Variant Supported)
+# =========================================================================
 def add_to_cart(request, product_id):
-    # 1. Product nikalo (get_object_or_404 best hai)
+    # Safe internal import agar upar na chal raha ho
+    from .models import Product, Cart, CartItem, ProductVariant
+
     product = get_object_or_404(Product, id=product_id)
 
-    # 2. Quantity nikalo (Jo humne JS se bheji hai '?quantity=3')
-    # Agar URL me quantity nahi mili, to default 1 manenge
+    # Detail page ke select dropdown se variant_id aayegi
+    variant_id = request.GET.get('variant_id')
+    
+    if not variant_id:
+        # Ab ye bina kisi NameError ke chalega 🎯
+        first_variant = ProductVariant.objects.filter(product=product, is_active=True).first()
+        if first_variant:
+            variant_id = first_variant.id
+        else:
+            return JsonResponse({'status': 'error', 'message': 'Is product ka koi variant available nahi hai!'})
+
+    # Variant object nikalenge
+    variant = get_object_or_404(ProductVariant, id=variant_id, product=product)
+
+    # Quantity filter check
     try:
         quantity = int(request.GET.get('quantity', 1))
     except ValueError:
         quantity = 1
 
-    # 3. Cart ka pata lagao
+    # Cart session handle
     try:
         cart = Cart.objects.get(cart_id=_cart_id(request))
     except Cart.DoesNotExist:
         cart = Cart.objects.create(cart_id=_cart_id(request))
     cart.save()
 
-    # 4. Cart Item Logic (Jodna hai ya naya banana hai)
+    # CartItem check aur save logic
     try:
-        cart_item = CartItem.objects.get(product=product, cart=cart)
+        cart_item = CartItem.objects.get(product=product, variant=variant, cart=cart)
         
-        # STOCK CHECK: Jitna stock hai usse jyada add na ho
-        if (cart_item.quantity + quantity) <= product.stock_quantity:
+        # Variant ke stock se validation check
+        if (cart_item.quantity + quantity) <= variant.stock_quantity:
             cart_item.quantity += quantity
             cart_item.save()
         else:
-            # Agar stock se jyada maang raha hai
-            return JsonResponse({'status': 'error', 'message': 'Stock khatam hone wala hai!'})
+            return JsonResponse({'status': 'error', 'message': f'Stock limited! Sirf {variant.stock_quantity} pieces bache hain.'})
             
     except CartItem.DoesNotExist:
-        # Naya item tabhi banao agar stock available ho
-        if quantity <= product.stock_quantity:
+        if quantity <= variant.stock_quantity:
             cart_item = CartItem.objects.create(
                 product=product,
+                variant=variant,
                 quantity=quantity,
                 cart=cart
             )
@@ -373,20 +245,22 @@ def add_to_cart(request, product_id):
         else:
             return JsonResponse({'status': 'error', 'message': 'Out of Stock!'})
     
-    # 5. Cart Count update karo
-    cart_count = CartItem.objects.filter(cart=cart).count()
+    # Total quantity ka sum nikal kar badge real-time sync karenge
+    total_qty_dict = CartItem.objects.filter(cart=cart).aggregate(total_qty=Sum('quantity'))
+    cart_count = total_qty_dict['total_qty'] or 0
 
-    # 6. JSON Return karo
     return JsonResponse({
         'status': 'success', 
-        'message': 'Product added successfully', 
+        'message': f'{product.name} ({variant.weight_or_size or variant.color or ""}) cart me add ho gaya! 🛒', 
         'cart_count': cart_count
     })
-
 
 # --- 2. CART DETAILS (Database Wala) ---
 # store/views.py
 
+# =========================================================================
+# 2. CART DETAILS (Variant Price Calculation)
+# =========================================================================
 def cart_details(request):
     total_price = 0
     total_items = 0
@@ -397,12 +271,17 @@ def cart_details(request):
         cart_items = CartItem.objects.filter(cart=cart, is_active=True)
         
         for cart_item in cart_items:
-            # Hum seedha model ki property use karenge calculation ke liye
-            total_price += cart_item.total 
-            total_items += cart_item.quantity
+            # AGAR variant mapped hai, toh rate variant ka lagega warna main product ka
+            if cart_item.variant:
+                item_price = cart_item.variant.selling_price
+            else:
+                item_price = cart_item.product.selling_price
+                
+            item_total = item_price * cart_item.quantity
+            cart_item.item_total_price = item_total # Template me access karne ke liye dynamic attribute
             
-            # ❌ Ye line humne HATA DI (Jo error de rahi thi):
-            # cart_item.total = temp_total 
+            total_price += item_total
+            total_items += cart_item.quantity
 
     except ObjectDoesNotExist:
         pass 
@@ -415,26 +294,35 @@ def cart_details(request):
     return render(request, 'cart.html', context)
 
 
-# --- 3. UPDATE CART (Database Wala) ---
+# =========================================================================
+# 3. UPDATE CART (Variant Stock Validation)
+# =========================================================================
 def update_cart(request, product_id, action):
-    # Product aur Cart dhundho
+    # Idhar hum cart_item_id se handle karein toh safe hai, par tumhare structure ke hisab se:
+    variant_id = request.GET.get('variant_id') # URL target parameter
     product = get_object_or_404(Product, id=product_id)
     cart = Cart.objects.get(cart_id=_cart_id(request))
-    cart_item = get_object_or_404(CartItem, product=product, cart=cart)
+    
+    if variant_id:
+        cart_item = get_object_or_404(CartItem, product=product, variant_id=variant_id, cart=cart)
+        max_stock = cart_item.variant.stock_quantity
+    else:
+        cart_item = CartItem.objects.filter(product=product, cart=cart).first()
+        max_stock = product.stock_quantity
 
     if action == 'plus':
-        if cart_item.quantity < product.stock_quantity:
+        if cart_item.quantity < max_stock:
             cart_item.quantity += 1
             cart_item.save()
         else:
-            messages.warning(request, f"Sorry, sirf {product.stock_quantity} pieces hi stock me hain.")
+            messages.warning(request, f"Sorry, sirf {max_stock} pieces hi stock me hain.")
     
     elif action == 'minus':
         if cart_item.quantity > 1:
             cart_item.quantity -= 1
             cart_item.save()
         else:
-            cart_item.delete() # 1 se kam hua to uda do
+            cart_item.delete()
     
     elif action == 'remove':
         cart_item.delete()
@@ -442,32 +330,32 @@ def update_cart(request, product_id, action):
     return redirect('cart')
 
 
-# --- 4. CHECKOUT LOGIC (Database Wala) ---
+# =========================================================================
+# 4. CHECKOUT & STOCK DECREMENT (Variant Friendly)
+# =========================================================================
 def checkout(request):
     try:
         cart = Cart.objects.get(cart_id=_cart_id(request))
         cart_items = CartItem.objects.filter(cart=cart, is_active=True)
         
-        # Agar cart khali hai (database me entry hai par items nahi)
         if not cart_items.exists():
              messages.warning(request, "Cart khali hai bhai!")
              return redirect('home')
-
     except ObjectDoesNotExist:
-        # Cart hi nahi hai
         messages.warning(request, "Cart khali hai bhai!")
         return redirect('home')
 
-    # Total Calculation
+    # Total Price calculation based on Variant Prices
     total_price = 0
     for item in cart_items:
-        total_price += (item.product.selling_price * item.quantity)
+        if item.variant:
+            total_price += (item.variant.selling_price * item.quantity)
+        else:
+            total_price += (item.product.selling_price * item.quantity)
 
-    # Form Submit Logic
     if request.method == 'POST':
         form = OrderForm(request.POST)
         if form.is_valid():
-            # 1. Order Create
             order = form.save(commit=False)
             if request.user.is_authenticated:
                 order.user = request.user
@@ -475,7 +363,6 @@ def checkout(request):
             order.save()
             request.session['customer_phone'] = order.customer_phone
 
-            # Notification Logic (Tera purana code)
             Notification.objects.create(
                 title="🎉 New Order Received!",
                 message=f"{order.customer_name} ne order kiya hai (₹{order.total_amount}). Jaldi pack karo!",
@@ -483,26 +370,37 @@ def checkout(request):
                 link=f"/admin/store/order/{order.id}/change/"
             )
 
-            # 2. Cart Items ko Order Items me shift karo
+            # Cart items ko Order Items me shift karo aur specific variant ka stock kam karo
             for item in cart_items:
+                # Agar variant mapped hai toh uski selling price hi order billing me jayegi
+                final_price = item.variant.selling_price if item.variant else item.product.selling_price
+                
+                # Note: Agar aapne OrderItem model me 'variant' field add kiya hai toh 'variant=item.variant' bhi dalo
                 OrderItem.objects.create(
                     order=order,
                     product=item.product,
-                    price=item.product.selling_price,
+                    price=final_price,
                     quantity=item.quantity
                 )
                 
-                # Stock Minus Logic
-                product = item.product
-                product.stock_quantity -= item.quantity
-                # 👇 YE NAYI LINE JOD DE (Sold Badhane ke liye)
-                product.total_sold += item.quantity
-                product.save()
+                # Stock Minus Logic from Variant Table
+                if item.variant:
+                    variant = item.variant
+                    variant.stock_quantity -= item.quantity
+                    variant.total_sold += item.quantity
+                    variant.save()
+                    
+                    # Back-up safety for main product overall counter
+                    product = item.product
+                    product.total_sold += item.quantity
+                    product.save()
+                else:
+                    product = item.product
+                    product.stock_quantity -= item.quantity
+                    product.total_sold += item.quantity
+                    product.save()
 
-            # 3. Cart Khali Karo (Database se item uda do)
             cart_items.delete() 
-            # Note: Hum Cart object delete nahi kar rahe, sirf items uda rahe hain
-            
             messages.success(request, "Order Place ho gaya! Jald hi delivery hogi. 🎉")
             return redirect('home')
             
@@ -701,3 +599,275 @@ def customer_insights(request):
         'query': query,
     }
     return render(request, 'customer_insights.html', context)
+
+
+def product_detail(request, product_id):
+    # Current product ko fetch karein
+    product = get_object_or_404(Product, id=product_id)
+    
+    # Is product ke saare active variants (weight ya color) nikalo
+    variants = product.variants.filter(is_active=True)
+    
+    # Related Products: Same category ke baaki items (current product ko chhod kar)
+    # .exclude(id=product.id) se vahi product dobara suggestion me nahi dikhega
+    # related_products = Product.objects.filter(category=product.category, is_active=True).exclude(id=product.id)[:4]
+    
+    # product_detail view ke andar jahan related_products nikalte ho:
+    related_products = Product.objects.filter(category=product.category).exclude(id=product.id)[:4]
+
+# 👇 YE LOGIC ADD KARO: Agar related products khali hain, toh koi bhi random 4 products utha lo
+    if not related_products.exists():
+        related_products = Product.objects.exclude(id=product.id).order_by('?')[:4]
+
+    context = {
+        'product': product,
+        'variants': variants,
+        'related_products': related_products,
+    }
+    return render(request, 'product_detail.html', context)
+
+
+
+# api code start from here 
+# 1. API to get all categories
+@api_view(['GET'])
+def api_category_list(request):
+    categories = Category.objects.all()
+    serializer = CategorySerializer(categories, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+# 2. API to get all products (with search and category filter built-in)
+@api_view(['GET'])
+def api_product_list(request):
+    products = Product.objects.all()
+    
+    # Flutter developer agar filter ya search bhejna chahe:
+    category_id = request.GET.get('category')
+    search_query = request.GET.get('search')
+    
+    if category_id:
+        products = products.filter(category_id=category_id)
+        
+    if search_query:
+        products = products.filter(name__icontains=search_query)
+        
+    # Serializer ko data denge aur ye nested variants ke sath JSON bana dega
+    serializer = ProductSerializer(products, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+def api_add_to_cart(request):
+    # App developer JSON ya form-data me product_id aur variant_id bhejega
+    product_id = request.data.get('product_id')
+    variant_id = request.data.get('variant_id')
+    
+    try:
+        quantity = int(request.data.get('quantity', 1))
+    except (ValueError, TypeError):
+        quantity = 1
+
+    if not product_id or not variant_id:
+        return Response({'status': 'error', 'message': 'product_id aur variant_id dono zaroori hain!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    product = get_object_or_404(Product, id=product_id)
+    variant = get_object_or_404(ProductVariant, id=variant_id, product=product)
+
+    # Cart session handle (jaise normal view me karte the)
+    try:
+        cart = Cart.objects.get(cart_id=_cart_id(request))
+    except Cart.DoesNotExist:
+        cart = Cart.objects.create(cart_id=_cart_id(request))
+    cart.save()
+
+    # CartItem logic
+    try:
+        cart_item = CartItem.objects.get(product=product, variant=variant, cart=cart)
+        if (cart_item.quantity + quantity) <= variant.stock_quantity:
+            cart_item.quantity += quantity
+            cart_item.save()
+        else:
+            return Response({'status': 'error', 'message': f'Stock limited! Sirf {variant.stock_quantity} pieces bache hain.'}, status=status.HTTP_400_BAD_REQUEST)
+    except CartItem.DoesNotExist:
+        if quantity <= variant.stock_quantity:
+            cart_item = CartItem.objects.create(
+                product=product, variant=variant, quantity=quantity, cart=cart
+            )
+            cart_item.save()
+        else:
+            return Response({'status': 'error', 'message': 'Out of Stock!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Naya total cart count nikalenge
+    total_qty_dict = CartItem.objects.filter(cart=cart).aggregate(total_qty=Sum('quantity'))
+    cart_count = total_qty_dict['total_qty'] or 0
+
+    return Response({
+        'status': 'success',
+        'message': f'{product.name} cart me add ho gaya!',
+        'cart_count': cart_count
+    }, status=status.HTTP_200_OK)
+
+
+# 1. GET API: Cart ke saare items aur Total Bill dikhane ke liye
+@api_view(['GET'])
+def api_cart_view(request):
+    try:
+        cart = Cart.objects.get(cart_id=_cart_id(request))
+        cart_items = CartItem.objects.filter(cart=cart)
+    except Cart.DoesNotExist:
+        return Response({
+            'cart_items': [],
+            'total_price': 0,
+            'cart_count': 0
+        }, status=status.HTTP_200_OK)
+
+    # Saare items ko serialize karenge
+    serializer = CartItemSerializer(cart_items, many=True)
+    
+    # Poore cart ka Total Bill nikalenge
+    total_price = sum(item.variant.selling_price * item.quantity for item in cart_items)
+    cart_count = sum(item.quantity for item in cart_items)
+
+    return Response({
+        'cart_items': serializer.data,
+        'total_price': total_price,
+        'cart_count': cart_count
+    }, status=status.HTTP_200_OK)
+
+
+# 2. POST API: Cart se quantity kam karne ya delete karne ke liye
+@api_view(['POST'])
+def api_remove_from_cart(request):
+    product_id = request.data.get('product_id')
+    variant_id = request.data.get('variant_id')
+
+    if not product_id or not variant_id:
+        return Response({'status': 'error', 'message': 'product_id aur variant_id dono zaroori hain!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    product = get_object_or_404(Product, id=product_id)
+    variant = get_object_or_404(ProductVariant, id=variant_id, product=product)
+    
+    try:
+        cart = Cart.objects.get(cart_id=_cart_id(request))
+        cart_item = CartItem.objects.get(product=product, variant=variant, cart=cart)
+        
+        # Agar quantity 1 se zyada hai toh kam karo, nahi toh poora delete kar do
+        if cart_item.quantity > 1:
+            cart_item.quantity -= 1
+            cart_item.save()
+            message = f"{product.name} ki quantity kam kar di gayi."
+        else:
+            cart_item.delete()
+            message = f"{product.name} ko cart se hata diya gaya."
+            
+    except (Cart.DoesNotExist, CartItem.DoesNotExist):
+        return Response({'status': 'error', 'message': 'Item cart me nahi mila!'}, status=status.HTTP_404_NOT_FOUND)
+
+    # Naya total count aur price nikal kar bhejenge real-time update ke liye
+    cart_items = CartItem.objects.filter(cart=cart)
+    total_price = sum(item.variant.selling_price * item.quantity for item in cart_items)
+    cart_count = sum(item.quantity for item in cart_items)
+
+    return Response({
+        'status': 'success',
+        'message': message,
+        'total_price': total_price,
+        'cart_count': cart_count
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+def api_place_order(request):
+    try:
+        cart = Cart.objects.get(cart_id=_cart_id(request))
+        cart_items = CartItem.objects.filter(cart=cart)
+    except Cart.DoesNotExist:
+        return Response({'status': 'error', 'message': 'Cart nahi mila!'}, status=status.HTTP_404_NOT_FOUND)
+
+    if not cart_items.exists():
+        return Response({'status': 'error', 'message': 'Apka cart khali hai!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    customer_name = request.data.get('customer_name')
+    customer_phone = request.data.get('customer_phone')
+    address_details = request.data.get('address_details')
+    area = request.data.get('area') 
+
+    if not customer_name or not customer_phone or not address_details:
+        return Response({'status': 'error', 'message': 'Name, Phone, aur Address zaroori hain!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    total_price = sum(item.variant.selling_price * item.quantity for item in cart_items)
+    tax = 0 
+    grand_total = total_price + tax
+
+    # 🛒 Order Table me data save
+    order = Order.objects.create(
+        user=request.user if request.user.is_authenticated else None,
+        customer_name=customer_name,
+        customer_phone=customer_phone,
+        address_details=address_details,
+        area=area if area else '', 
+        total_amount=grand_total,  # 👈 Yahan 'order_total' hata kar 'total_amount' kar diya hai
+        tax=tax,
+        status='New',
+        is_ordered=True
+    )
+    
+    # Items transfer aur stock reduction
+    for item in cart_items:
+        OrderItem.objects.create(
+            order=order,
+            user=request.user if request.user.is_authenticated else None,
+            product=item.product,
+            variant=item.variant,
+            quantity=item.quantity,
+            price=item.variant.selling_price,
+            ordered=True
+        )
+        
+        variant = item.variant
+        variant.stock_quantity -= item.quantity
+        variant.save()
+
+    request.session['customer_phone'] = customer_phone
+    cart_items.delete()
+
+    return Response({
+        'status': 'success',
+        'message': 'Mubarak ho! Order place ho gaya hai. 🎉',
+        'order_id': order.id,
+        'grand_total': grand_total
+    }, status=status.HTTP_201_CREATED)
+
+
+@api_view(['GET'])
+def api_my_orders(request):
+    orders = []
+    phone = request.GET.get('phone')
+
+    # 1. PRIORITY 1: Agar URL me saaf-saaf phone number bheja hai (Testing aur Guest user ke liye best)
+    if phone:
+        orders = Order.objects.filter(customer_phone=phone).order_by('-id')
+        
+    # 2. PRIORITY 2: Agar URL me phone nahi hai par user logged in hai
+    elif request.user.is_authenticated:
+        orders = Order.objects.filter(user=request.user).order_by('-id')
+        
+    # 3. PRIORITY 3: Agar dono nahi hai to browser session se phone uthao
+    else:
+        phone = request.session.get('customer_phone')
+        if phone:
+            orders = Order.objects.filter(customer_phone=phone).order_by('-id')
+        else:
+            return Response({
+                'status': 'error', 
+                'message': 'Phone number ya user authentication zaroori hai!'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+    # Data ko serialize karke return karenge
+    serializer = OrderHistorySerializer(orders, many=True, context={'request': request})
+    
+    return Response({
+        'status': 'success',
+        'orders_count': orders.count(),
+        'orders': serializer.data
+    }, status=status.HTTP_200_OK)
