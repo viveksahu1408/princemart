@@ -28,7 +28,7 @@ urlpatterns = [
     path('api/categories/', views.api_category_list, name='api_category_list'),
     path('api/products/', views.api_product_list, name='api_product_list'),
     path('api/cart/add/', views.api_add_to_cart, name='api_add_to_cart'),
-
+    path('api/products/<int:product_id>/', views.api_product_detail, name='api_product_detail'), # <-- Ye line ensure karo
     path('api/cart/', views.api_cart_view, name='api_cart_view'),
     path('api/cart/remove/', views.api_remove_from_cart, name='api_remove_from_cart'),
     path('api/order/place/', views.api_place_order, name='api_place_order'),

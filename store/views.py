@@ -871,3 +871,17 @@ def api_my_orders(request):
         'orders_count': orders.count(),
         'orders': serializer.data
     }, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+def api_product_detail(request, product_id):
+    try:
+        product = Product.objects.get(id=product_id)
+        # Tumhara ProductSerializer is single product ko nested variants ke sath parse kar dega
+        serializer = ProductSerializer(product)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    except Product.DoesNotExist:
+        return Response({
+            'status': 'error', 
+            'message': 'Product nahi mila!'
+        }, status=status.HTTP_404_NOT_FOUND)    
