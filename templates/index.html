@@ -90,7 +90,8 @@
                     {% if product.image %}
                     <img src="{{ product.image.url }}" class="card-img-top" alt="{{ product.name }}" style="width: 100%; height: 100%; object-fit: contain; padding: 10px;">
                     {% endif %}
-                    {% if product.stock_quantity == 0 %}
+                    
+                    {% if not product.is_in_stock %}
                     <div class="position-absolute top-0 start-0 bg-danger text-white px-2 py-1 small" style="border-radius: 0 0 10px 0; font-size: 10px;">
                         OUT OF STOCK
                     </div>
@@ -120,13 +121,14 @@
                 </div>
 
                 <div class="mt-auto">
-                    {% if product.stock_quantity > 0 %}
+                    {% if product.is_in_stock %}
                     <div class="row g-2 mb-2">
                         <div class="col-12">
                             <div class="input-group input-group-custom-qty">
                                 <button class="btn btn-outline-secondary qty-btn" type="button" onclick="changeQty('{{ product.id }}', -1)">-</button>
                                 <input type="text" id="qty-{{ product.id }}" class="form-control text-center qty-input" value="1" readonly style="background: white;">
-                                <button class="btn btn-outline-success qty-btn" type="button" onclick="changeQty('{{ product.id }}', 1, {{ product.stock_quantity }})">+</button>
+                                
+                                <button class="btn btn-outline-success qty-btn" type="button" onclick="changeQty('{{ product.id }}', 1, {{ product.total_stock }})">+</button>
                             </div>
                         </div>
                     </div>
@@ -169,7 +171,7 @@
         .then(data => {
             if (data.status === 'success') {
                 
-                // 🔥 BADGE SYNC FIX: Ab dono templates (.cart-count-badge) ko ek sath target kiya
+                // BADGE SYNC FIX
                 let cartBadges = document.querySelectorAll('.cart-count-badge');
                 if (cartBadges.length > 0) {
                     cartBadges.forEach(badge => {
@@ -177,7 +179,6 @@
                     });
                 }
 
-                // Fallback direct unique IDs ke liye agar class kisi vajah se delay kare
                 let mobileBadge = document.getElementById('cart-count');
                 let desktopBadge = document.getElementById('cart-count-desktop');
                 if (mobileBadge) { mobileBadge.innerText = data.cart_count; }
@@ -194,7 +195,6 @@
                     alert(data.message); 
                 }
                 
-                // Add karne ke baad default input wapas 1 kar do
                 document.getElementById('qty-' + productId).value = 1;
             } else { 
                 alert("Error: " + data.message); 

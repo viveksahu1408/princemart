@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 import datetime
+from django.db.models import Sum
 
 # --- KATNI AREA LIST (Dropdown ke liye) ---
 KATNI_AREAS = (
@@ -77,6 +78,26 @@ class Product(models.Model):
 
     def __str__(self):
         return self.name
+    
+    @property
+    def total_stock(self):
+        """
+        Ye property automatic is product ke saare active variants ka 
+        stock total karke return karega.
+        """
+        # Agar related_name='variants' hai toh:
+        try:
+            total = self.variants.filter(is_active=True).aggregate(Sum('stock_quantity'))['stock_quantity__sum']
+        # Agar related_name nahi diya hai toh default 'productvariant_set' chalega:
+        except AttributeError:
+            total = self.productvariant_set.filter(is_active=True).aggregate(Sum('stock_quantity'))['stock_quantity__sum']
+            
+        return total if total is not None else 0
+
+    @property
+    def is_in_stock(self):
+        """Direct check karne ke liye ki product stock me hai ya nahi"""
+        return self.total_stock > 0
 
 
 # 3. Product Variant (Dynamic Attributes System)

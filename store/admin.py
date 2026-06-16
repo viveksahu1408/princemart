@@ -4,6 +4,9 @@ from django.utils.html import format_html
 from django.urls import reverse
 from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin
+from django.apps import AppConfig
+from django.db.models import Sum
+from django.db.models import Min
 
 # =========================================================================
 # 1. CATEGORY REGISTRATION
@@ -21,33 +24,46 @@ class ProductVariantInline(admin.TabularInline):
 
 
 class ProductAdmin(admin.ModelAdmin):
-    # list_display me ab hum variant_type dikhayenge aur list_editable se stock hata diya hai kyuki wo variant me dikhega
     list_display = ('name', 'category', 'variant_type', 'unit', 'stock_status', 'total_sold',)
     search_fields = ('name', 'category__name',)
     list_filter = ('category', 'variant_type',)
     
-    # Default Sorting: Jiska total_sold sabse zyada hai ya naye requirements ke hisab se set karein
-    ordering = ['name']
-    
-    # Is line se Product ke page par hi variants jodne ka option niche table me dikhega
     inlines = [ProductVariantInline]
 
-    # Ye function rangeen status banayega variants ki overall management dekhne ke liye
-    def stock_status(self, obj):
-        # Saare variants ka total stock nikal kar check karte hain
-        total_variants_stock = sum(variant.stock_quantity for variant in obj.variants.all())
-        
-        if total_variants_stock == 0:
-            return format_html('<span style="color:red; font-weight:bold;">❌ Out of Stock</span>')
-        elif total_variants_stock <= 10:
-            return format_html('<span style="color:orange; font-weight:bold;">⚠️ Low Stock ({})</span>', total_variants_stock)
-        else:
-            return format_html('<span style="color:green; font-weight:bold;">✅ In Stock</span>')
+    # 🔥 Database sorting: Jo variant sabse kam stock wala hai, uske hisab se product upar aayega
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        queryset = queryset.annotate(
+            annotated_stock=Min('variants__stock_quantity')
+        )
+        return queryset.order_by('annotated_stock')
 
-    stock_status.short_description = "Stock Alert"
+    # 🔥 DYNAMIC FIX: Exact Number aur Variant ke Naam ke sath upar lana
+    def stock_status(self, obj):
+        active_variants = obj.variants.filter(is_active=True)
+        if not active_variants.exists():
+            return format_html('<b style="color: #e74c3c;">No Variant Found</b>')
+            
+        # Sabse kam stock wala variant dhoondte hain
+        lowest_variant = min(active_variants, key=lambda v: v.stock_quantity)
+        qty = lowest_variant.stock_quantity
+        name = lowest_variant.weight_or_size  # Jaise '1 Kg', '250 Gm', '1 Pcs'
+        
+        if qty == 0:
+            return format_html('<b style="color: #e74c3c;">{} - 0 Bacha (Khatam)</b>', name)
+        elif qty <= 5:
+            # 5 ya usse kam bacha hone par Orange alert exact number ke sath
+            return format_html('<b style="color: #e67e22;">{} - {} Bacha</b>', name, qty)
+        else:
+            # Safe zone ke liye simple green count
+            return format_html('<span style="color: #2ecc71; font-weight: bold;">✅ {} - {} Bacha</span>', name, qty)
+
+    stock_status.short_description = "Lowest Variant Stock"
+    stock_status.admin_order_field = 'annotated_stock'
 
 admin.site.register(Product, ProductAdmin)
-admin.site.register(ProductVariant)  # Isse alag se bhi database check karne me aasani hogi
+
+# ⚠️ NOTE: Purani duplicate 'admin.site.register(ProductVariant)' line yahan se hata di gayi hai!
 
 
 # =========================================================================
@@ -66,7 +82,6 @@ class OrderItemInline(admin.TabularInline):
 
 
 class OrderAdmin(admin.ModelAdmin):
-    # Address aur area ko automatic jod kar dikhane wala function
     def formatted_address(self, obj):
         if obj.address_details and obj.area:
             return f"{obj.address_details}, {obj.get_area_display()}"
@@ -84,7 +99,6 @@ class OrderAdmin(admin.ModelAdmin):
     actions = [mark_as_delivered]
     inlines = [OrderItemInline]
 
-    # Bill, Pack List aur Thermal Receipt Buttons System
     def order_actions(self, obj):
         return format_html(
             '<a class="button" href="{}">📄 Bill</a>&nbsp;'
@@ -139,3 +153,30 @@ class CustomUserAdmin(UserAdmin):
     total_orders_count.short_description = "Total Orders"
 
 admin.site.register(User, CustomUserAdmin)
+
+
+# =========================================================================
+# 6. PRODUCT VARIANT ADVANCED STOCK SORTING SYSTEM
+# =========================================================================
+@admin.register(ProductVariant)
+class ProductVariantAdmin(admin.ModelAdmin):
+    # Admin screen par ye columns dikhenge
+    list_display = ('product', 'weight_or_size', 'exact_stock_count', 'selling_price')
+    
+    # 🔥 MAGIC: Sabse kam stock wale variants line se sabse upar milenge (0, then 1, then 2...)
+    ordering = ['stock_quantity']
+    
+    search_fields = ('product__name', 'weight_or_size')
+
+    # Direct Number Display System
+    def exact_stock_count(self, obj):
+        if obj.stock_quantity == 0:
+            return format_html('<b style="color: #e74c3c;">0 Bacha Hai (Khatam)</b>')
+        elif obj.stock_quantity <= 5:
+            # 5 ya usse kam bacha hone par number alag se highlight hoga
+            return format_html('<b style="color: #e67e22;">{} Bacha Hai</b>', obj.stock_quantity)
+        else:
+            # Normal stock ke liye simple number dikhega
+            return format_html('<span style="color: #2ecc71;">{} Bacha Hai</span>', obj.stock_quantity)
+            
+    exact_stock_count.short_description = 'Available Stock' 
