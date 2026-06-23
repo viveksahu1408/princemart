@@ -163,6 +163,9 @@ class ProductVariantAdmin(admin.ModelAdmin):
     # Admin screen par ye columns dikhenge
     list_display = ('product', 'weight_or_size', 'exact_stock_count', 'selling_price')
     
+    # 2. Category ka filter lagane ke liye double underscore (__) use hoga
+    list_filter = ('product__category', 'weight_or_size')
+
     # 🔥 MAGIC: Sabse kam stock wale variants line se sabse upar milenge (0, then 1, then 2...)
     ordering = ['stock_quantity']
     
