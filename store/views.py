@@ -768,7 +768,7 @@ def api_place_order(request):
         product=item.product,
         variant=item.variant,
         quantity=item.quantity,
-        product_price=item.variant.selling_price
+        price=item.variant.selling_price
     )
         
         variant = item.variant
