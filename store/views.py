@@ -753,15 +753,12 @@ def api_place_order(request):
 
     # 🛒 Order Table me data save
     order = Order.objects.create(
-        user=request.user if request.user.is_authenticated else None,
-        customer_name=customer_name,
-        customer_phone=customer_phone,
-        address_details=address_details,
-        area=area if area else '', 
-        total_amount=grand_total,  # 👈 Yahan 'order_total' hata kar 'total_amount' kar diya hai
-        tax=tax,
-        status='New',
-        is_ordered=True
+    customer_name=customer_name,
+    customer_phone=customer_phone,
+    address_details=address_details,
+    area=area,
+    total_amount=grand_total,  
+    status='New'
     )
     
     # Items transfer aur stock reduction
