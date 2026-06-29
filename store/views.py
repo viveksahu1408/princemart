@@ -1,18 +1,14 @@
-from django.shortcuts import render
-from django.db.models import Sum
+# api code start from line number 630 here 
 from django.contrib.admin.views.decorators import staff_member_required
 from .models import Product, Order, OrderItem,Category, Banner
 import datetime
-from django.shortcuts import redirect, get_object_or_404
-from .models import Product
+from django.shortcuts import redirect, get_object_or_404,render
 from django.contrib import messages
 from .forms import OrderForm
-from django.db.models import Q # Search ke liye
-#pdf ke liye
+from django.db.models import Q,Sum,Count
 from .utils import render_to_pdf 
 import csv # Excel export ke liye
 from django.http import HttpResponse
-from django.db.models import Sum,Count # Ye import jaruri hai
 from django.db.models.functions import TruncMonth
 from .models import Notification,Cart, CartItem # notification ke liye h 
 from django.core.exceptions import ObjectDoesNotExist # Ye error handle karne ke liye
@@ -22,14 +18,9 @@ from django.contrib.auth.models import User
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
-from .models import Product, Category
-from .serializers import ProductSerializer, CategorySerializer
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-from rest_framework import status
-from .models import Product, ProductVariant, Cart, CartItem
-from .serializers import CartItemSerializer
-from .serializers import OrderHistorySerializer
+from .serializers import ProductSerializer, CategorySerializer,CartItemSerializer,OrderHistorySerializer
+from .models import Product, ProductVariant, Cart, CartItem, Category
+
 
 
 @staff_member_required # Sirf admin hi dekh payega
@@ -145,45 +136,6 @@ def _cart_id(request):
     if not cart:
         cart = request.session.create()
     return cart
-# Views.py me add_to_cart function
-
-# def add_to_cart(request, product_id):
-#     current_product = Product.objects.get(id=product_id)
-    
-#     # 1. Cart ka pata lagao
-#     try:
-#         cart = Cart.objects.get(cart_id=_cart_id(request))
-#     except Cart.DoesNotExist:
-#         cart = Cart.objects.create(cart_id=_cart_id(request))
-#     cart.save()
-
-#     # 2. Cart Item logic
-#     try:
-#         cart_item = CartItem.objects.get(product=current_product, cart=cart)
-#         if request.method == 'POST':
-#             quantity = int(request.POST.get('quantity', 1))
-#             cart_item.quantity += quantity
-#         else:
-#             cart_item.quantity += 1
-#         cart_item.save()
-#     except CartItem.DoesNotExist:
-#         quantity = int(request.POST.get('quantity', 1))
-#         cart_item.create(
-#             product=current_product,
-#             quantity=quantity,
-#             cart=cart
-#         )
-#         cart_item.save()
-    
-#     # --- 👇 YAHAN MISSING THA (Ye line add kar) 👇 ---
-#     cart_count = CartItem.objects.filter(cart=cart).count()
-#     # ------------------------------------------------
-
-#     return JsonResponse({
-#         'status': 'success', 
-#         'message': 'Product added successfully', 
-#         'cart_count': cart_count  # Ab ye chalega kyunki upar humne count nikaal liya
-#     })
 
 
 # =========================================================================

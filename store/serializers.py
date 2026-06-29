@@ -17,32 +17,47 @@ class ProductVariantSerializer(serializers.ModelSerializer):
 
 # 3. Main Product Serializer
 class ProductSerializer(serializers.ModelSerializer):
-    # Relational fields ko handle karne ke liye:
     category = CategorySerializer(read_only=True)
-    
-    # 🎯 SUPER TRICK: Ek product ke saare active variants nested JSON bankar jayenge
-    # Dhyaan dena: agar tumhare ProductVariant model me product field par related_name='variants' nahi hai, 
-    # toh productvariant_set use karna padega.
     variants = ProductVariantSerializer(many=True, read_only=True) 
     
+    market_price = serializers.SerializerMethodField()
+    selling_price = serializers.SerializerMethodField()
+    stock_quantity = serializers.SerializerMethodField()
     discount_percentage = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
         fields = [
-            'id', 'name','image', 'description', 
+            'id', 'name', 'image', 'description', 
             'unit', 'market_price', 'selling_price', 
             'stock_quantity', 'category', 'variants', 'discount_percentage'
         ]
 
-    # Agar mobile app me bhi direct discount percentage dikhana ho
+    # 🔥 1. Product ID ke base par seedhe ProductVariant table se filter karo
+    def get_market_price(self, obj):
+        # Seedhe ProductVariant model se query karo bina kisi _set jhanjhat ke
+        active_variants = ProductVariant.objects.filter(product=obj, is_active=True)
+        lowest_variant = active_variants.order_by('selling_price').first()
+        return float(lowest_variant.market_price) if lowest_variant else 0.0
+
+    # 🔥 2. Sabse saste variant ka Selling Price
+    def get_selling_price(self, obj):
+        active_variants = ProductVariant.objects.filter(product=obj, is_active=True)
+        lowest_variant = active_variants.order_by('selling_price').first()
+        return float(lowest_variant.selling_price) if lowest_variant else 0.0
+
+    # 🔥 3. Saare active variants ka total stock
+    def get_stock_quantity(self, obj):
+        active_variants = ProductVariant.objects.filter(product=obj, is_active=True)
+        return sum(variant.stock_quantity for variant in active_variants)
+
+    # 🔥 4. Saste variant ke hisaab se discount percentage
     def get_discount_percentage(self, obj):
-        try:
-            return obj.get_discount_percentage() # Tumhara model wala method call ho jayega
-        except:
-            if obj.market_price > obj.selling_price:
-                return int(((obj.market_price - obj.selling_price) / obj.market_price) * 100)
-            return 0
+        m_price = self.get_market_price(obj)
+        s_price = self.get_selling_price(obj)
+        if m_price > s_price and m_price > 0:
+            return int(((m_price - s_price) / m_price) * 100)
+        return 0
         
 class CartItemSerializer(serializers.ModelSerializer):
     # Nested serializer taaki item ke sath product aur variant ki poori detail chali jaye
@@ -61,10 +76,14 @@ class CartItemSerializer(serializers.ModelSerializer):
 # 1. Order ke andar ke items ke liye
 class OrderItemSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source='product.name', read_only=True)
+    # 🎯 NEW FIELDS: Variant ka size aur product ki main unit nikalne ke liye
+    variant_size = serializers.CharField(source='variant.weight_or_size', read_only=True)
+    product_unit = serializers.CharField(source='product.unit', read_only=True) 
     
     class Meta:
         model = OrderItem
-        fields = ['id', 'product_name', 'quantity', 'price']
+        fields = ['id', 'product_name', 'variant_size', 'product_unit', 'quantity', 'price']
+
 
 # 2. Main Order History Ke Liye
 # 2. Main Order History Ke Liye (Updated with total_amount)
