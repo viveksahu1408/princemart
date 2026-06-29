@@ -33,5 +33,6 @@ urlpatterns = [
     path('api/cart/remove/', views.api_remove_from_cart, name='api_remove_from_cart'),
     path('api/order/place/', views.api_place_order, name='api_place_order'),
     path('api/my-orders/', views.api_my_orders, name='api_my_orders'),
+    path('api/search/', views.api_product_search, name='api_product_search'),
 
 ]

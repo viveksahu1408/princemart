@@ -837,3 +837,23 @@ def api_product_detail(request, product_id):
             'status': 'error', 
             'message': 'Product nahi mila!'
         }, status=status.HTTP_404_NOT_FOUND)    
+    
+@api_view(['GET'])
+def api_product_search(request):
+    # Flutter app se query parameter uthayenge (Jaise: /api/search/?q=namkeen)
+    query = request.GET.get('q', '').strip()
+    
+    if query:
+        # 🎯 SUPER SEARCH: Name, Description, aur Category Name teeno me ek sath dhoondo
+        products = Product.objects.filter(
+            Q(name__icontains=query) | 
+            Q(description__icontains=query) |
+            Q(category__name__icontains=query)
+        ).distinct() # distinct() se duplicate products nahi aayenge
+    else:
+        # Agar user ne kuch type nahi kiya, toh khali list bhej do
+        products = Product.objects.none()
+        
+    # Hamara wahi naya dynamic serializer use karenge jo variants bhi nikal ke dega
+    serializer = ProductSerializer(products, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)    
