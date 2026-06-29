@@ -764,14 +764,12 @@ def api_place_order(request):
     # Items transfer aur stock reduction
     for item in cart_items:
         OrderItem.objects.create(
-            order=order,
-            user=request.user if request.user.is_authenticated else None,
-            product=item.product,
-            variant=item.variant,
-            quantity=item.quantity,
-            price=item.variant.selling_price,
-            ordered=True
-        )
+        order=order,
+        product=item.product,
+        variant=item.variant,
+        quantity=item.quantity,
+        product_price=item.variant.price
+    )
         
         variant = item.variant
         variant.stock_quantity -= item.quantity
