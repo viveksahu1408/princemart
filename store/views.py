@@ -758,7 +758,7 @@ def api_place_order(request):
     address_details=address_details,
     area=area,
     total_amount=grand_total,  
-    status='New'
+    status=True
     )
     
     # Items transfer aur stock reduction
