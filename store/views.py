@@ -860,17 +860,9 @@ def api_product_search(request):
     serializer = ProductSerializer(products, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)   
 
-def api_legal_content(request):
+def api_legal_urls(request):
     data = {
-        "privacy_policy": {
-            "title": "Privacy Policy",
-            "last_updated": "July 2026",
-            "content": "Welcome to YP-Mart. We value your privacy and are committed to protecting your personal data. We collect information you provide directly to us, including your name, mobile number, delivery address, and order history when you place an order. This data is used solely to process, fulfill, and deliver your orders, and to notify you about order updates or offers. Your data security is important to us; we implement industry-standard practices to ensure your personal details are safe and confidential."
-        },
-        "terms_conditions": {
-            "title": "Terms & Conditions",
-            "last_updated": "July 2026",
-            "content": "By accessing or using the YP-Mart website or mobile application, you agree to be bound by these Terms and Conditions. All orders placed through the platform are subject to product availability. YP-Mart reserves the right to accept, reject, or cancel any order due to stock unavailability or pricing issues. Prices for products are listed in the app/website and are inclusive of local taxes where applicable. We aim to deliver items within the scheduled time frame, though delays may occur due to unforeseen circumstances."
-        }
+        "privacy_policy_url": "https://princemart.in/privacy-policy/",
+        "terms_conditions_url": "https://princemart.in/terms-conditions/"
     }
-    return JsonResponse(data, safe=False, json_dumps_params={'ensure_ascii': False}) 
+    return JsonResponse(data)
