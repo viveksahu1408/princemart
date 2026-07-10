@@ -23,6 +23,8 @@ urlpatterns = [
     path('packing-list/<int:order_id>/', views.packing_list, name='packing_list'),
     path('export-orders/', views.export_orders_xls, name='export_orders'),
 
+    path('privacy-policy/', views.privacy_policy, name='privacy_policy'),
+    path('terms-conditions/', views.terms_conditions, name='terms_conditions'),
 
    # 🎯 API ENDPOINTS
     path('api/categories/', views.api_category_list, name='api_category_list'),

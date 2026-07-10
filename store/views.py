@@ -579,6 +579,13 @@ def product_detail(request, product_id):
     return render(request, 'product_detail.html', context)
 
 
+def privacy_policy(request):
+    return render(request, 'privacy_policy.html')
+
+def terms_conditions(request):
+    return render(request, 'terms_conditions.html')    
+
+
 
 # api code start from here 
 # 1. API to get all categories

@@ -176,8 +176,11 @@
     <footer class="bg-dark text-white text-center py-4 mt-5 d-none d-md-block">
         <div class="container">
             <p class="mb-1">&copy; 2026 YP-Mart. All Rights Reserved.</p>
-            <small class="text-white">Developed by Decode Web Tech </small>
-            <small class="text-white">Mo. +91 7999182954 </small>
+            <div class="mb-2">
+                <a href="{% url 'privacy_policy' %}" class="text-white-50 text-decoration-none me-3">Privacy Policy</a>
+                <a href="{% url 'terms_conditions' %}" class="text-white-50 text-decoration-none">Terms & Conditions</a>
+            </div>
+            <small class="text-white-50 d-block">Developed by Decode Web Tech | Mo. +91 7999182954</small>
         </div>
     </footer>
 
