@@ -20,6 +20,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from .serializers import ProductSerializer, CategorySerializer,CartItemSerializer,OrderHistorySerializer
 from .models import Product, ProductVariant, Cart, CartItem, Category
+from django.views.decorators.csrf import csrf_exempt
 
 
 
@@ -736,6 +737,7 @@ def api_remove_from_cart(request):
 
 
 @api_view(['POST'])
+@csrf_exempt  # <-- Yeh line ensure karegi ki mobile app bina session cookie ke bhi data post kar sake
 def api_place_order(request):
     try:
         cart = Cart.objects.get(cart_id=_cart_id(request))
