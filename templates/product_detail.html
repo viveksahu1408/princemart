@@ -50,14 +50,17 @@
                     </label>
                     
                     <input type="hidden" id="selected-variant-id" value="{% if variants %}{{ variants.0.id }}{% endif %}">
+                    <!-- Dynamic stock tracking ke liye hidden field -->
+                    <input type="hidden" id="selected-variant-stock" value="{% if variants %}{{ variants.0.stock_quantity }}{% else %}0{% endif %}">
                     
                     <div class="d-flex flex-wrap" style="gap: 10px;">
                         {% for variant in variants %}
                             <button type="button" 
                                     class="btn variant-pill-btn {% if forloop.first %}active-variant{% else %}inactive-variant{% endif %}" 
                                     data-variant-id="{{ variant.id }}" 
+                                    data-variant-stock="{{ variant.stock_quantity }}"
                                     data-variant-image="{% if variant.image %}{{ variant.image.url }}{% endif %}" 
-                                    onclick="selectVariant(this, '{{ variant.id }}')">
+                                    onclick="selectVariant(this, '{{ variant.id }}', '{{ variant.stock_quantity }}')">
                                 {% if product.variant_type == 'weight' %}
                                     {{ variant.weight_or_size }}
                                 {% else %}
@@ -66,6 +69,9 @@
                                 <span class="d-block small font-weight-bold mt-1">₹{{ variant.selling_price }}</span>
                                 {% if variant.market_price > variant.selling_price %}
                                     <del class="text-muted small" style="font-size: 11px;">₹{{ variant.market_price }}</del>
+                                {% endif %}
+                                {% if variant.stock_quantity == 0 %}
+                                    <span class="d-block text-danger font-weight-bold" style="font-size: 10px;">Out of Stock</span>
                                 {% endif %}
                             </button>
                         {% endfor %}
@@ -97,31 +103,29 @@
             </h3>
         </div>
         <div class="row px-2">
-    {% for rel_product in related_products %}
-        <div class="col-md-3 col-6 mb-3 px-2 position-relative">
-            <div class="card h-100 product-light-card" style="background-color: #ffffff; border: 1px solid #e9ecef; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.04); cursor: pointer;">
-                
-                <div class="text-center p-2 d-flex align-items-center justify-content-center" style="background-color: #f8f9fa; height: 130px;">
-                    {% if rel_product.image %}
-                        <img src="{{ rel_product.image.url }}" class="card-img-top" alt="{{ rel_product.name }}" style="max-height: 110px; max-width: 100%; object-fit: contain;">
-                    {% endif %}
-                </div>
-                
-                <div class="card-body d-flex flex-column justify-content-between p-2 text-center">
-                    <h6 class="card-title font-weight-bold mb-1 text-dark" style="font-size: 13px; height: 36px; overflow: hidden; line-height: 1.4;">{{ rel_product.name }}</h6>
-                    <div>
-                        <p class="card-text font-weight-bold text-success mb-2" style="font-size: 14px;">₹{{ rel_product.selling_price }}</p>
+            {% for rel_product in related_products %}
+                <div class="col-md-3 col-6 mb-3 px-2 position-relative">
+                    <div class="card h-100 product-light-card" style="background-color: #ffffff; border: 1px solid #e9ecef; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.04); cursor: pointer;">
+                        <div class="text-center p-2 d-flex align-items-center justify-content-center" style="background-color: #f8f9fa; height: 130px;">
+                            {% if rel_product.image %}
+                                <img src="{{ rel_product.image.url }}" class="card-img-top" alt="{{ rel_product.name }}" style="max-height: 110px; max-width: 100%; object-fit: contain;">
+                            {% endif %}
+                        </div>
                         
-                        <a href="{% url 'product_detail' rel_product.id %}" class="btn btn-outline-secondary btn-sm w-100 py-1 stretched-link" style="border-radius: 6px; font-size: 12px; font-weight: 500;">
-                            View Details
-                        </a>
+                        <div class="card-body d-flex flex-column justify-content-between p-2 text-center">
+                            <h6 class="card-title font-weight-bold mb-1 text-dark" style="font-size: 13px; height: 36px; overflow: hidden; line-height: 1.4;">{{ rel_product.name }}</h6>
+                            <div>
+                                <p class="card-text font-weight-bold text-success mb-2" style="font-size: 14px;">₹{{ rel_product.selling_price }}</p>
+                                
+                                <a href="{% url 'product_detail' rel_product.id %}" class="btn btn-outline-secondary btn-sm w-100 py-1 stretched-link" style="border-radius: 6px; font-size: 12px; font-weight: 500;">
+                                    View Details
+                                </a>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                
-            </div>
+            {% endfor %}
         </div>
-    {% endfor %}
-</div>
     </div>
 </div>
 
@@ -135,8 +139,8 @@
 </style>
 
 <script>
-// Variant selection and image swap logic
-function selectVariant(element, variantId) {
+// Variant selection and image swap + stock update logic
+function selectVariant(element, variantId, stockQuantity) {
     let buttons = document.getElementsByClassName('variant-pill-btn');
     for (let i = 0; i < buttons.length; i++) {
         buttons[i].classList.remove('active-variant');
@@ -144,7 +148,18 @@ function selectVariant(element, variantId) {
     }
     element.classList.remove('inactive-variant');
     element.classList.add('active-variant');
+    
     document.getElementById('selected-variant-id').value = variantId;
+    document.getElementById('selected-variant-stock').value = stockQuantity;
+
+    // Variant change hone par agar current quantity stock se zyada hai, ya stock 0 hai toh counter reset karo
+    let stock = parseInt(stockQuantity);
+    let qtyInput = document.getElementById('qty-counter');
+    if (stock === 0) {
+        qtyInput.value = 1; // display ke liye 1 rakhenge par plus dabate hi block ho jayega
+    } else if (parseInt(qtyInput.value) > stock) {
+        qtyInput.value = stock;
+    }
 
     // --- Dynamic Image Change Logic ---
     let mainImg = document.getElementById('main-product-image');
@@ -152,7 +167,6 @@ function selectVariant(element, variantId) {
         let variantImgUrl = element.getAttribute('data-variant-image');
         let defaultImgUrl = mainImg.getAttribute('data-default-image');
         
-        // Agar variant ki alag image hai toh wo dikhao, nahi toh default main image lagao
         if (variantImgUrl && variantImgUrl.trim() !== "") {
             mainImg.src = variantImgUrl;
         } else {
@@ -161,11 +175,14 @@ function selectVariant(element, variantId) {
     }
 }
 
-// Pehle wale dynamic display setting ke liye automatic ek baar switch initial trigger run karne ke liye code
 document.addEventListener("DOMContentLoaded", function() {
     let firstActiveBtn = document.querySelector('.variant-pill-btn.active-variant');
     if (firstActiveBtn) {
         let variantImgUrl = firstActiveBtn.getAttribute('data-variant-image');
+        let stockQty = firstActiveBtn.getAttribute('data-variant-stock');
+        if (stockQty) {
+            document.getElementById('selected-variant-stock').value = stockQty;
+        }
         let mainImg = document.getElementById('main-product-image');
         if (mainImg && variantImgUrl && variantImgUrl.trim() !== "") {
             mainImg.src = variantImgUrl;
@@ -173,25 +190,59 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 });
 
+// Real-Time Stock Aware Quantity Buttons (+) & (-)
 function changeQuantity(operation) {
     let qtyInput = document.getElementById('qty-counter');
     let currentQty = parseInt(qtyInput.value);
-    if (operation === 'plus') { qtyInput.value = currentQty + 1; }
-    else if (operation === 'minus' && currentQty > 1) { qtyInput.value = currentQty - 1; }
+    let currentStock = parseInt(document.getElementById('selected-variant-stock').value) || 0;
+
+    if (operation === 'plus') {
+        // 1. Agar Stock 0 hai
+        if (currentStock <= 0) {
+            alert("Yeh variant abhi Out of Stock hai!");
+            return;
+        }
+        // 2. Agar stock limit reach ho gayi hai
+        if (currentQty >= currentStock) {
+            alert(`Stock Limit! Is variant ke sirf ${currentStock} pieces hi available hain.`);
+            qtyInput.value = currentStock;
+        } else {
+            qtyInput.value = currentQty + 1;
+        }
+    } 
+    else if (operation === 'minus' && currentQty > 1) {
+        qtyInput.value = currentQty - 1;
+    }
 }
 
 function addToCartFromDetail(productId, baseUrl) {
     let variantId = document.getElementById('selected-variant-id').value;
-    let qty = document.getElementById('qty-counter').value;
-    if (!variantId || variantId === "") { alert("Bhai pehle koi variant select kar lo!"); return; }
+    let currentStock = parseInt(document.getElementById('selected-variant-stock').value) || 0;
+    let qty = parseInt(document.getElementById('qty-counter').value);
+
+    if (!variantId || variantId === "") { 
+        alert("Bhai pehle koi variant select kar lo!"); 
+        return; 
+    }
+
+    // Direct Front-end restriction on Add to Cart
+    if (currentStock <= 0) {
+        alert("Sorry Out of Stock.");
+        return;
+    }
+
+    if (qty > currentStock) {
+        alert(`Stock limit exceeded! Sirf ${currentStock} pieces bache hain.`);
+        document.getElementById('qty-counter').value = currentStock;
+        return;
+    }
+
     let finalUrl = `${baseUrl}?quantity=${qty}&variant_id=${variantId}`;
     
     fetch(finalUrl)
     .then(response => response.json())
     .then(data => {
         if (data.status === 'success') {
-            
-            // 1. Sabse pehle class wale saare badges ko ek sath update karo (Dono navbars ke liye)
             let cartBadges = document.querySelectorAll('.cart-count-badge');
             if (cartBadges.length > 0) {
                 cartBadges.forEach(badge => {
@@ -199,19 +250,17 @@ function addToCartFromDetail(productId, baseUrl) {
                 });
             }
 
-            // 2. Fallback: Agar tumhare base.html me 'cart-count' naam ki purani ID chal rahi ho
             let oldCartBadge = document.getElementById('cart-count');
             if (oldCartBadge) {
                 oldCartBadge.innerText = data.cart_count;
             }
 
-            // 3. Fallback 2: Direct specific IDs ko target karna safe rehne ke liye
             let topBadge = document.getElementById('top-cart-count');
-            let bottomBadge = document.getElementById('bottom-cart-count');
+            if (bottomBadge = document.getElementById('bottom-cart-count')) {
+                bottomBadge.innerText = data.cart_count;
+            }
             if (topBadge) topBadge.innerText = data.cart_count;
-            if (bottomBadge) bottomBadge.innerText = data.cart_count;
 
-            // Toast/Alert system
             let toastMessage = document.getElementById('toast-message');
             if (toastMessage) { toastMessage.innerText = data.message; }
             let toastElement = document.getElementById('cartToast');
@@ -219,7 +268,9 @@ function addToCartFromDetail(productId, baseUrl) {
                 let toast = new bootstrap.Toast(toastElement); 
                 toast.show();
             } else { alert(data.message); }
-        } else { alert("Error: " + data.message); }
+        } else { 
+            alert(data.message); 
+        }
     })
     .catch(error => { console.error('Error:', error); });
 }

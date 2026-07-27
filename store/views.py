@@ -143,7 +143,6 @@ def _cart_id(request):
 # 1. ADD TO CART (Variant Supported)
 # =========================================================================
 def add_to_cart(request, product_id):
-    # Safe internal import agar upar na chal raha ho
     from .models import Product, Cart, CartItem, ProductVariant
 
     product = get_object_or_404(Product, id=product_id)
@@ -152,7 +151,6 @@ def add_to_cart(request, product_id):
     variant_id = request.GET.get('variant_id')
     
     if not variant_id:
-        # Ab ye bina kisi NameError ke chalega 🎯
         first_variant = ProductVariant.objects.filter(product=product, is_active=True).first()
         if first_variant:
             variant_id = first_variant.id
@@ -162,9 +160,9 @@ def add_to_cart(request, product_id):
     # Variant object nikalenge
     variant = get_object_or_404(ProductVariant, id=variant_id, product=product)
 
-    # Quantity filter check
     try:
         quantity = int(request.GET.get('quantity', 1))
+        if quantity <= 0: quantity = 1
     except ValueError:
         quantity = 1
 
@@ -175,16 +173,20 @@ def add_to_cart(request, product_id):
         cart = Cart.objects.create(cart_id=_cart_id(request))
     cart.save()
 
-    # CartItem check aur save logic
+    # 🎯 WEBAPP STOCK VALIDATION LOGIC
     try:
         cart_item = CartItem.objects.get(product=product, variant=variant, cart=cart)
+        total_requested = cart_item.quantity + quantity
         
-        # Variant ke stock se validation check
-        if (cart_item.quantity + quantity) <= variant.stock_quantity:
-            cart_item.quantity += quantity
+        # Variant Stock Check
+        if total_requested <= variant.stock_quantity:
+            cart_item.quantity = total_requested
             cart_item.save()
         else:
-            return JsonResponse({'status': 'error', 'message': f'Stock limited! Sirf {variant.stock_quantity} pieces bache hain.'})
+            return JsonResponse({
+                'status': 'error', 
+                'message': f'Stock Limit Exceeded! Maximum {variant.stock_quantity} pieces hi available hain.'
+            })
             
     except CartItem.DoesNotExist:
         if quantity <= variant.stock_quantity:
@@ -196,9 +198,8 @@ def add_to_cart(request, product_id):
             )
             cart_item.save()
         else:
-            return JsonResponse({'status': 'error', 'message': 'Out of Stock!'})
+            return JsonResponse({'status': 'error', 'message': f'Out of Stock! Sirf {variant.stock_quantity} bache hain.'})
     
-    # Total quantity ka sum nikal kar badge real-time sync karenge
     total_qty_dict = CartItem.objects.filter(cart=cart).aggregate(total_qty=Sum('quantity'))
     cart_count = total_qty_dict['total_qty'] or 0
 
@@ -251,8 +252,7 @@ def cart_details(request):
 # 3. UPDATE CART (Variant Stock Validation)
 # =========================================================================
 def update_cart(request, product_id, action):
-    # Idhar hum cart_item_id se handle karein toh safe hai, par tumhare structure ke hisab se:
-    variant_id = request.GET.get('variant_id') # URL target parameter
+    variant_id = request.GET.get('variant_id') 
     product = get_object_or_404(Product, id=product_id)
     cart = Cart.objects.get(cart_id=_cart_id(request))
     
@@ -261,14 +261,18 @@ def update_cart(request, product_id, action):
         max_stock = cart_item.variant.stock_quantity
     else:
         cart_item = CartItem.objects.filter(product=product, cart=cart).first()
-        max_stock = product.stock_quantity
+        max_stock = cart_item.variant.stock_quantity if (cart_item and cart_item.variant) else product.stock_quantity
+
+    if not cart_item:
+        return redirect('cart')
 
     if action == 'plus':
+        # 🎯 Plus dabane par Stock Limit Check
         if cart_item.quantity < max_stock:
             cart_item.quantity += 1
             cart_item.save()
         else:
-            messages.warning(request, f"Sorry, sirf {max_stock} pieces hi stock me hain.")
+            messages.warning(request, f"Sorry, is variant ke sirf {max_stock} pieces hi stock me hain!")
     
     elif action == 'minus':
         if cart_item.quantity > 1:
@@ -281,7 +285,6 @@ def update_cart(request, product_id, action):
         cart_item.delete()
 
     return redirect('cart')
-
 
 # =========================================================================
 # 4. CHECKOUT & STOCK DECREMENT (Variant Friendly)

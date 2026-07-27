@@ -84,7 +84,7 @@
 <div class="row g-3">
     {% for product in products %}
     <div class="col-6 col-md-3">
-        <div class="card h-100 border-0 shadow-sm" style="border-radius: 12px; overflow: hidden;">
+        <div class="card h-100 border-0 shadow-sm" style="border-radius: 12px; overflow: hidden; cursor:pointer;" onclick="window.location.href='{% url 'product_detail' product.id %}'">
             <a href="{% url 'product_detail' product.id %}" class="text-decoration-none">
                 <div style="height: 140px; overflow: hidden; background: #f8f9fa; position: relative;">
                     {% if product.image %}
@@ -125,17 +125,17 @@
                     <div class="row g-2 mb-2">
                         <div class="col-12">
                             <div class="input-group input-group-custom-qty">
-                                <button class="btn btn-outline-secondary qty-btn" type="button" onclick="changeQty('{{ product.id }}', -1)">-</button>
-                                <input type="text" id="qty-{{ product.id }}" class="form-control text-center qty-input" value="1" readonly style="background: white;">
+                                <button class="btn btn-outline-secondary qty-btn" type="button" onclick="window.location.href='{% url 'product_detail' product.id %}'">-</button>
+                                <input type="text" id="qty-{{ product.id }}" class="form-control text-center qty-input" value="1" readonly onclick="window.location.href='{% url 'product_detail' product.id %}'" style="background: white;">
                                 
-                                <button class="btn btn-outline-success qty-btn" type="button" onclick="changeQty('{{ product.id }}', 1, {{ product.total_stock }})">+</button>
+                                <button class="btn btn-outline-success qty-btn" type="button" onclick="window.location.href='{% url 'product_detail' product.id %}'">+</button>
                             </div>
                         </div>
                     </div>
 
                     <div class="row g-2">
                         <div class="col-12">
-                            <button onclick="addToCart('{{ product.id }}', '{% url 'add_to_cart' product.id %}')" class="btn btn-primary w-100 add-btn-height">
+                            <button onclick="window.location.href='{% url 'product_detail' product.id %}'" class="btn btn-primary w-100 add-btn-height">
                                 Add <i class="fas fa-cart-plus"></i>
                             </button>
                         </div>
