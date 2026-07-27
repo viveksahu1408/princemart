@@ -10,7 +10,7 @@
 
         body { 
             font-family: Helvetica, sans-serif; 
-            font-size: 12px; /* PDF mein 24px bahut bada ho jayega, 14-16 sahi hai */
+            font-size: 12px; 
             color: #000; 
             margin: 0; 
             padding: 0; 
@@ -35,10 +35,9 @@
         .item-name { font-size: 8px; font-weight: bold; }
         
         .total-section { 
-            margin-top: 10px; 
+            margin-top: 8px; 
             text-align: right; 
-            font-size: 12px;
-            font-weight: bold;
+            font-size: 10px;
         }
 
         .footer {
@@ -60,10 +59,6 @@
         </p>
     </div>
 
-    <!-- <div style="margin-bottom: 10px; font-size: 12px;">
-        <strong>Bill To:</strong> {{ order.customer_name }}<br>
-        <strong>ID:</strong> #{{ order.id }} | <strong>Date:</strong> {{ order.date }}
-    </div> -->
     <div style="margin-bottom: 12px;">
         <strong>Bill To:</strong><br>
         Name: {{ order.customer_name }}<br>
@@ -95,7 +90,16 @@
     </table>
 
     <div class="total-section">
-        Grand Total: Rs. {{ order.total_amount }}
+        Items Subtotal: Rs. {{ items_total }}<br>
+        Delivery Charge: 
+        {% if delivery_charge > 0 %}
+            Rs. {{ delivery_charge }}
+        {% else %}
+            FREE
+        {% endif %}<br>
+        <div style="font-size: 12px; font-weight: bold; margin-top: 4px; border-top: 1px solid #000; padding-top: 2px;">
+            Grand Total: Rs. {{ order.total_amount }}
+        </div>
     </div>
 
     <div class="footer">

@@ -34,7 +34,7 @@
                     </div>
 
                     <button type="submit" class="btn btn-success w-100 py-2 mt-3 fw-bold">
-                        Confirm Order (₹{{ total_price }})
+                        Confirm Order (₹{{ grand_total }})
                     </button>
                 </form>
             </div>
@@ -59,12 +59,24 @@
                             </h6>
                             <small class="text-muted">Qty: {{ item.quantity }}</small>
                         </div>
-                        <span class="text-muted">₹{{ item.total }}</span>
+                        <span class="text-muted">₹{% if item.variant %}{{ item.variant.selling_price }}{% else %}{{ item.product.selling_price }}{% endif %}</span>
                     </li>
                     {% endfor %}
-                    <li class="list-group-item d-flex justify-content-between bg-white fw-bold">
-                        <span>Total (INR)</span>
+                    <li class="list-group-item d-flex justify-content-between bg-white">
+                        <span>Items Total</span>
                         <span>₹{{ total_price }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between bg-white">
+                        <span>Delivery Fee</span>
+                        {% if delivery_charge > 0 %}
+                            <span>₹{{ delivery_charge }}</span>
+                        {% else %}
+                            <span class="text-success fw-bold">FREE</span>
+                        {% endif %}
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between bg-white fw-bold h6 mb-0">
+                        <span>Grand Total</span>
+                        <span class="text-primary">₹{{ grand_total }}</span>
                     </li>
                 </ul>
 
