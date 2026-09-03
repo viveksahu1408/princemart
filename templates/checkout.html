@@ -8,6 +8,11 @@
                 <h4 class="mb-0 fw-bold">📍 Delivery Details</h4>
             </div>
             <div class="card-body">
+                <!-- Delivery Area Error Banner -->
+                <div id="delivery-block-msg" class="alert alert-danger shadow-sm mb-3 d-none" role="alert">
+                    <i class="fas fa-ban me-2"></i> <strong>Delivery Unavailable:</strong> Aapki location hamare delivery area se baahar hai. Is location par order place nahi kiya ja sakta.
+                </div>
+
                 <form method="POST">
                     {% csrf_token %}
                     
@@ -33,7 +38,7 @@
                         {{ form.address_details }}
                     </div>
 
-                    <button type="submit" class="btn btn-success w-100 py-2 mt-3 fw-bold">
+                    <button type="submit" id="place-order-btn" class="btn btn-success w-100 py-2 mt-3 fw-bold">
                         Confirm Order (₹{{ grand_total }})
                     </button>
                 </form>
@@ -93,4 +98,85 @@
 </div>
 
 <div style="height: 100px;"></div>
+
+<!-- CHECKOUT LOCATION & AUTO-FILL SCRIPT -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const placeOrderBtn = document.getElementById("place-order-btn");
+    const blockMsg = document.getElementById("delivery-block-msg");
+    const form = document.querySelector("form");
+
+    // Form Fields Selectors
+    const nameInput = document.querySelector('[name="customer_name"]');
+    const phoneInput = document.querySelector('[name="customer_phone"]');
+    const areaInput = document.querySelector('[name="area"]');
+    const addressInput = document.querySelector('[name="address_details"]');
+
+    // AUTO-FILL SAVED DETAILS ON LOAD
+    if (localStorage.getItem("customer_phone")) {
+        if (nameInput && localStorage.getItem("customer_name")) nameInput.value = localStorage.getItem("customer_name");
+        if (phoneInput && localStorage.getItem("customer_phone")) phoneInput.value = localStorage.getItem("customer_phone");
+        if (areaInput && localStorage.getItem("customer_area")) areaInput.value = localStorage.getItem("customer_area");
+        if (addressInput && localStorage.getItem("customer_address")) addressInput.value = localStorage.getItem("customer_address");
+    }
+
+    // SAVE DETAILS ON FORM SUBMIT
+    if (form) {
+        form.addEventListener("submit", function () {
+            if (nameInput) localStorage.setItem("customer_name", nameInput.value);
+            if (phoneInput) localStorage.setItem("customer_phone", phoneInput.value);
+            if (areaInput) localStorage.setItem("customer_area", areaInput.value);
+            if (addressInput) localStorage.setItem("customer_address", addressInput.value);
+        });
+    }
+
+    // Location verification logic
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(verifyCheckoutLocation, handleGeoError);
+    }
+
+    function verifyCheckoutLocation(position) {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+
+        fetch('/api/check-delivery/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({ lat: lat, lng: lng })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (!data.available) {
+                if (placeOrderBtn) {
+                    placeOrderBtn.disabled = true;
+                    placeOrderBtn.classList.remove("btn-success");
+                    placeOrderBtn.classList.add("btn-secondary");
+                    placeOrderBtn.innerText = "Delivery Not Available Here";
+                }
+                if (blockMsg) {
+                    blockMsg.classList.remove("d-none");
+                }
+            } else {
+                if (placeOrderBtn) {
+                    placeOrderBtn.disabled = false;
+                    placeOrderBtn.classList.remove("btn-secondary");
+                    placeOrderBtn.classList.add("btn-success");
+                    placeOrderBtn.innerText = "Confirm Order (₹{{ grand_total }})";
+                }
+                if (blockMsg) {
+                    blockMsg.classList.add("d-none");
+                }
+            }
+        })
+        .catch(err => console.error("Checkout Location Check Error:", err));
+    }
+
+    function handleGeoError(err) {
+        console.log("Location access not granted on checkout page.");
+    }
+});
+</script>
 {% endblock %}

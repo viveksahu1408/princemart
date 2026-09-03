@@ -100,11 +100,23 @@
       </div>
     </nav>
 
+    <!-- TOAST CONTAINER (Cart & Location Alerts) -->
     <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100; margin-bottom: 60px;">
+      <!-- Cart Toast -->
       <div id="cartToast" class="toast align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
         <div class="d-flex">
           <div class="toast-body">
             <i class="fas fa-check-circle me-2"></i> <span id="toast-message">Item added to cart!</span>
+          </div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+      </div>
+
+      <!-- Location Delivery Toast (NEW) -->
+      <div id="deliveryToast" class="toast align-items-center text-white border-0" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+          <div class="toast-body" id="delivery-toast-body">
+            <!-- Dynamic Message Here -->
           </div>
           <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
         </div>
@@ -185,6 +197,77 @@
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- AUTOMATIC GEOFENCE LOCATION CHECKER SCRIPT -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            // Geographic location check trigger
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(checkDeliveryArea, handleGeoError);
+            }
+
+            function checkDeliveryArea(position) {
+                const userLat = position.coords.latitude;
+                const userLng = position.coords.longitude;
+
+                fetch('/api/check-delivery/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({ lat: userLat, lng: userLng })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.available) {
+                        showDeliveryToast('<i class="fas fa-map-marker-alt me-2"></i> Delivery is available at your location!', true);
+                    } else {
+                        showDeliveryToast('<i class="fas fa-exclamation-triangle me-2"></i> Sorry, we do not deliver to this location currently.', false);
+                    }
+                })
+                .catch(error => {
+                    console.error('Location Check Error:', error);
+                });
+            }
+
+            function handleGeoError(error) {
+                console.log("Location access not granted or unavailable.");
+            }
+
+            function showDeliveryToast(message, isSuccess) {
+                const toastElem = document.getElementById('deliveryToast');
+                const toastBody = document.getElementById('delivery-toast-body');
+                
+                if (toastElem && toastBody) {
+                    toastBody.innerHTML = message;
+                    if (isSuccess) {
+                        toastElem.className = "toast align-items-center text-white bg-success border-0";
+                    } else {
+                        toastElem.className = "toast align-items-center text-white bg-danger border-0";
+                    }
+                    
+                    let bsToast = new bootstrap.Toast(toastElem, { delay: 5000 });
+                    bsToast.show();
+                }
+            }
+
+            function getCsrfToken() {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, 10) === ('csrftoken=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(10));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+        });
+    </script>
     
-    </body>
+  </body>
 </html>

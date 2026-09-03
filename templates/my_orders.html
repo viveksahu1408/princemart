@@ -11,9 +11,9 @@
                     <i class="fas fa-user"></i>
                 </div>
                 <div>
-                    <h5 class="mb-0 fw-bold">{{ customer.name|default:"Guest User" }}</h5>
-                    <p class="mb-0 small opacity-75">+91 {{ customer.phone }}</p>
-                    <p class="mb-0 small opacity-75">
+                    <h5 class="mb-0 fw-bold" id="profile-name">{{ customer.name|default:"Guest User" }}</h5>
+                    <p class="mb-0 small opacity-75" id="profile-phone">+91 {{ customer.phone }}</p>
+                    <p class="mb-0 small opacity-75" id="profile-address">
                         <i class="fas fa-map-marker-alt me-1"></i> 
                         {{ customer.address|default:"Address not updated" }}
                     </p>
@@ -32,9 +32,11 @@
                     <small class="text-muted ms-2">{{ order.date }}</small>
                 </div>
                 
-
-                <a href="{% url 'order_invoice' order.id %}" class="btn btn-sm btn-outline-primary" title="Download Bill"> <i class="fas fa-file-invoice"></i> Bill </a>
-                
+                <div>
+                    <a href="{% url 'order_invoice' order.id %}" class="btn btn-sm btn-outline-primary me-1" title="Download Bill">
+                        <i class="fas fa-file-invoice"></i> Bill 
+                    </a>
+                </div>
             </div>
 
             <div class="card-body">
@@ -50,14 +52,23 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <span class="fw-bold text-primary">Total: ₹{{ order.total_amount }}</span>
                     
-                    {% if order.status %}
-                        <span class="badge bg-success">Delivered</span>
-                    {% else %}
-                        <span class="badge bg-warning text-dark">On the Way</span>
-                    {% endif %}
+                    <div>
+                        {% if order.is_cancelled or order.status == 'Cancelled' %}
+                            <span class="badge bg-danger">Cancelled</span>
+                        {% elif order.status == 'Delivered' or order.status == True %}
+                            <span class="badge bg-success">Delivered</span>
+                        {% else %}
+                            <span class="badge bg-warning text-dark me-2">On the Way</span>
+                            <!-- CUSTOMER CANCEL BUTTON WITH PHONE PARAMETER -->
+                            <a href="{% url 'cancel_order' order.id %}{% if customer.phone %}?phone={{ customer.phone }}{% endif %}" 
+                               class="btn btn-sm btn-outline-danger py-0 px-2 cancel-btn" 
+                               onclick="return confirm('Kya aap sach me ye order cancel karna chahte hain?');">
+                                Cancel
+                            </a>
+                        {% endif %}
+                    </div>
                 </div>
-                
-                </div>
+            </div>
         </div>
         {% endfor %}
     {% else %}
@@ -69,4 +80,45 @@
     {% endif %}
 </div>
 <div style="height: 80px;"></div>
+
+<!-- PERSISTENT ORDER HISTORY & PROFILE SCRIPT -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const savedPhone = localStorage.getItem("customer_phone");
+    const savedName = localStorage.getItem("customer_name");
+    const savedAddress = localStorage.getItem("customer_address");
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const currentPhoneInUrl = urlParams.get('phone');
+
+    // 1. Dynamic UI details update if present in localStorage
+    if (savedName) {
+        const profileNameElem = document.getElementById("profile-name");
+        if (profileNameElem && profileNameElem.innerText.trim() === "Guest User") {
+            profileNameElem.innerText = savedName;
+        }
+    }
+
+    if (savedAddress) {
+        const profileAddrElem = document.getElementById("profile-address");
+        if (profileAddrElem && profileAddrElem.innerText.includes("Address not updated")) {
+            profileAddrElem.innerHTML = `<i class="fas fa-map-marker-alt me-1"></i> ${savedAddress}`;
+        }
+    }
+
+    // 2. Auto-append phone to cancel links if missing
+    if (savedPhone) {
+        document.querySelectorAll('.cancel-btn').forEach(btn => {
+            if (!btn.href.includes('phone=')) {
+                btn.href += (btn.href.includes('?') ? '&' : '?') + 'phone=' + savedPhone;
+            }
+        });
+    }
+
+    // 3. Auto-load Order History via Phone URL Parameter
+    if (!currentPhoneInUrl && savedPhone) {
+        window.location.href = "{% url 'my_orders' %}?phone=" + savedPhone;
+    }
+});
+</script>
 {% endblock %}

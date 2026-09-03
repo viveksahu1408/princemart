@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Category, Product, ProductVariant, Order, OrderItem, Banner, Notification
+from .models import Category,DeliveryZone, Product, ProductVariant, Order, OrderItem, Banner, Notification
 from django.utils.html import format_html
 from django.urls import reverse
 from django.contrib.auth.models import User
@@ -183,3 +183,30 @@ class ProductVariantAdmin(admin.ModelAdmin):
             return format_html('<span style="color: #2ecc71;">{} Bacha Hai</span>', obj.stock_quantity)
             
     exact_stock_count.short_description = 'Available Stock' 
+
+# =========================================================================
+# 7. DELIVERY ZONE GEOFENCING SYSTEM (LEAFLET MAP DRAWER)
+# =========================================================================
+@admin.register(DeliveryZone)
+class DeliveryZoneAdmin(admin.ModelAdmin):
+    list_display = ('name', 'is_active', 'total_points')
+    list_editable = ('is_active',)
+    change_form_template = 'change_form.html'
+    # change_form_template = 'admin/store/deliveryzone/change_form.html'
+
+    def total_points(self, obj):
+        points = obj.get_coordinates_list()
+        return f"{len(points)} Boundary Points"
+    total_points.short_description = 'Polygon Detail'
+
+    class Media:
+        css = {
+            'all': (
+                'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
+                'https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css',
+            )
+        }
+        js = (
+            'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
+            'https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js',
+        )

@@ -25,6 +25,8 @@ urlpatterns = [
 
     path('privacy-policy/', views.privacy_policy, name='privacy_policy'),
     path('terms-conditions/', views.terms_conditions, name='terms_conditions'),
+    path('cancel-order/<int:order_id>/', views.cancel_order, name='cancel_order'),
+
 
    # 🎯 API ENDPOINTS
     path('api/categories/', views.api_category_list, name='api_category_list'),
@@ -37,6 +39,8 @@ urlpatterns = [
     path('api/my-orders/', views.api_my_orders, name='api_my_orders'),
     path('api/search/', views.api_product_search, name='api_product_search'),
     path('api/legal-links/', views.api_legal_urls, name='api_legal_urls'),
+    path('api/check-delivery/',views.check_delivery_availability,name='check_delivery',),
+
 
 
 ]

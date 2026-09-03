@@ -162,6 +162,8 @@
         inputField.value = newQty;
     }
 
+    
+
     function addToCart(productId, baseUrl) {
         let qty = document.getElementById('qty-' + productId).value;
         let finalUrl = `${baseUrl}?quantity=${qty}`;

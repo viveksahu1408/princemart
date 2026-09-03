@@ -1,9 +1,8 @@
 # api code start from line number 630 here 
 from django.contrib.admin.views.decorators import staff_member_required
-from .models import Product, Order, OrderItem, Category, Banner
+from .models import Product, Order, OrderItem, Category, Banner,DeliveryZone
 import datetime
 from django.shortcuts import redirect, get_object_or_404, render
-from django.contrib import messages
 from .forms import OrderForm
 from django.db.models import Q, Sum, Count
 from .utils import render_to_pdf 
@@ -14,6 +13,13 @@ from .models import Notification, Cart, CartItem # notification ke liye h
 from django.core.exceptions import ObjectDoesNotExist # Ye error handle karne ke liye
 from django.http import JsonResponse # Sabse upar ye import kar
 from django.contrib.auth.models import User
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+import json
+from .utils import is_location_deliverable
+from django.contrib import messages
+
+
 # api vale 
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -220,7 +226,7 @@ def cart_details(request):
 
     # 🚚 DELIVERY CHARGE LOGIC
     if total_price > 0 and total_price < 1000:
-        delivery_charge = 20
+        delivery_charge = 15
     else:
         delivery_charge = 0
 
@@ -298,7 +304,7 @@ def checkout(request):
 
     # 🚚 DELIVERY CHARGE LOGIC
     if total_price > 0 and total_price < 1000:
-        delivery_charge = 20
+        delivery_charge = 15
     else:
         delivery_charge = 0
 
@@ -551,6 +557,50 @@ def terms_conditions(request):
     return render(request, 'terms_conditions.html')    
 
 
+@csrf_exempt
+def check_delivery_availability(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            lat = float(data.get('lat'))
+            lng = float(data.get('lng'))
+            
+            deliverable = is_location_deliverable(lat, lng)
+            
+            if deliverable:
+                return JsonResponse({'available': True, 'message': 'Delivery is available at your location.'})
+            else:
+                return JsonResponse({'available': False, 'message': 'Sorry, we do not deliver to this location currently.'})
+        except Exception as e:
+            return JsonResponse({'available': False, 'error': str(e)}, status=400)
+            
+    return JsonResponse({'error': 'Only POST method allowed'}, status=405)
+
+def cancel_order(request, order_id):
+    order = get_object_or_404(Order, id=order_id)
+    
+    if not order.status and not order.is_cancelled:
+        order.is_cancelled = True
+        order.save()
+        
+        # Stock restore logic
+        for item in order.orderitem_set.all():
+            if item.variant:
+                item.variant.stock_quantity += item.quantity
+                item.variant.save()
+            elif item.product:
+                item.product.stock_quantity += item.quantity
+                item.product.save()
+                
+        messages.success(request, f"Order #{order.id} cancel ho gaya hai.")
+    else:
+        messages.error(request, "Is order ko cancel nahi kiya ja sakta.")
+        
+    phone = request.GET.get('phone', '')
+    if phone:
+        return redirect(f'/my-orders/?phone={phone}')
+    return redirect('my_orders')
+
 # =========================================================================
 # API CODE STARTS FROM HERE
 # =========================================================================
@@ -649,7 +699,7 @@ def api_cart_view(request):
 
     # 🚚 DELIVERY CHARGE LOGIC FOR API
     if total_price > 0 and total_price < 1000:
-        delivery_charge = 20
+        delivery_charge = 15
     else:
         delivery_charge = 0
 
@@ -697,7 +747,7 @@ def api_remove_from_cart(request):
 
     # 🚚 DELIVERY CHARGE LOGIC
     if total_price > 0 and total_price < 1000:
-        delivery_charge = 20
+        delivery_charge = 15
     else:
         delivery_charge = 0
 
@@ -738,7 +788,7 @@ def api_place_order(request):
     
     # 🚚 DELIVERY CHARGE LOGIC
     if total_price > 0 and total_price < 1000:
-        delivery_charge = 20
+        delivery_charge = 15
     else:
         delivery_charge = 0
 
@@ -842,3 +892,70 @@ def api_legal_urls(request):
         "terms_conditions_url": "https://princemart.in/terms-conditions/"
     }
     return JsonResponse(data)
+
+# open street map adding lan-lat
+def is_location_deliverable(user_lat, user_lng):
+    """
+    Returns True if (user_lat, user_lng) falls inside any active DeliveryZone polygon.
+    """
+    from .models import DeliveryZone
+    
+    zones = DeliveryZone.objects.filter(is_active=True)
+    
+    for zone in zones:
+        coords = zone.get_coordinates_list()
+        if not coords or len(coords) < 3:
+            continue
+            
+        # Ray-casting Algorithm
+        inside = False
+        n = len(coords)
+        p1lat, p1lng = float(coords[0]['lat']), float(coords[0]['lng'])
+        
+        for i in range(n + 1):
+            p2lat, p2lng = float(coords[i % n]['lat']), float(coords[i % n]['lng'])
+            if user_lat > min(p1lat, p2lat):
+                if user_lat <= max(p1lat, p2lat):
+                    if user_lng <= max(p1lng, p2lng):
+                        if p1lat != p2lat:
+                            xinters = (user_lat - p1lat) * (p2lng - p1lng) / (p2lat - p1lat) + p1lng
+                        if p1lng == p2lng or user_lng <= xinters:
+                            inside = not inside
+            p1lat, p1lng = p2lat, p2lng
+            
+        if inside:
+            return True
+            
+    return False
+
+@csrf_exempt
+def check_delivery_availability(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            lat = float(data.get('lat'))
+            lng = float(data.get('lng'))
+
+            is_deliverable = is_location_deliverable(lat, lng)
+
+            if is_deliverable:
+                return JsonResponse(
+                    {
+                        'available': True,
+                        'message': 'Delivery is available at your location.',
+                    }
+                )
+            else:
+                return JsonResponse(
+                    {
+                        'available': False,
+                        'message': (
+                            'Sorry, we do not deliver to this location'
+                            ' currently.'
+                        ),
+                    }
+                )
+        except Exception as e:
+            return JsonResponse({'available': False, 'error': str(e)}, status=400)
+
+    return JsonResponse({'error': 'Invalid request method'}, status=405)

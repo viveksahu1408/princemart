@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 import datetime
 from django.db.models import Sum
+import json
 
 # --- KATNI AREA LIST (Dropdown ke liye) ---
 KATNI_AREAS = (
@@ -21,6 +22,23 @@ KATNI_AREAS = (
     # ('sabji_mandi_camp', 'Sabji Mandi Camp'),
     # ('shanti_nagar', 'Shanti Nagar'),
 )
+
+# open street map adding
+class DeliveryZone(models.Model):
+    name = models.CharField(max_length=100, help_text="Area Zone Name (e.g. Ameerganj Zone)")
+    is_active = models.BooleanField(default=True)
+    # Polygon Coordinates List (JSON format me save honge: [[lat, lng], [lat, lng], ...])
+    coordinates = models.TextField(help_text="JSON format me Leaflet.js polygon coordinates", default="[]")
+
+    def get_coordinates_list(self):
+        try:
+            return json.loads(self.coordinates)
+        except Exception:
+            return []
+
+    def __str__(self):
+        return self.name
+
 
 # 1. Category (Samaan ki list)
 class Category(models.Model):
@@ -168,6 +186,9 @@ class Order(models.Model):
     total_amount = models.DecimalField(default=0, max_digits=10, decimal_places=2)
     status = models.BooleanField(default=False, help_text="Delivery Status")
     is_paid = models.BooleanField(default=False, help_text="Payment Status")
+    status = models.BooleanField(default=False) # True = Delivered, False = On the way
+    is_cancelled = models.BooleanField(default=False) # True = Cancelled
+
 
     DELIVERY_CHOICES = [
         ('Delivery', 'Home Delivery'),
