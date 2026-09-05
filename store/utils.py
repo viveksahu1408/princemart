@@ -2,21 +2,19 @@ import os
 from django.conf import settings
 from django.http import HttpResponse
 from django.template.loader import get_template
+from xhtml2pdf import pisa
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-from xhtml2pdf import pisa
 import json
 from .models import DeliveryZone
 
 
-# Global Font Registration (Ek hi baar register hoga)
 FONT_PATH = os.path.join(settings.BASE_DIR, 'static', 'fonts', 'NotoSans.ttf')
 if os.path.exists(FONT_PATH):
     try:
-        pdfmetrics.registerFont(TTFont('NotoSans', FONT_PATH))
+        pdfmetrics.registerFont(TTFont('NotoSansHindi', FONT_PATH))
     except Exception as e:
-        print(f'Font registration warning: {e}')
-
+        print(f"Font Load Error: {e}")
 
 def render_to_pdf(template_src, context_dict={}):
     template = get_template(template_src)
@@ -25,7 +23,11 @@ def render_to_pdf(template_src, context_dict={}):
     response = HttpResponse(content_type='application/pdf')
     response['Content-Disposition'] = 'inline; filename="invoice.pdf"'
 
-    pisa_status = pisa.CreatePDF(html, dest=response)
+    pisa_status = pisa.CreatePDF(
+        html, 
+        dest=response, 
+        encoding='utf-8'
+    )
 
     if pisa_status.err:
         return HttpResponse('PDF generation error', status=500)
@@ -61,7 +63,6 @@ def is_location_deliverable(user_lat, user_lng):
         if not coordinates or len(coordinates) < 3:
             continue
 
-        # Check if coordinates are [lat, lng] or [lng, lat]
         formatted_polygon = []
         for pt in coordinates:
             if isinstance(pt, dict):

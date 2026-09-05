@@ -1,15 +1,21 @@
 <!DOCTYPE HTML>
 <html>
 <head>
+    <meta charset="utf-8">
     <style>
-        /* xhtml2pdf ko samjhane ke liye page settings */
+        /* Hindi Font (Noto Sans) Configuration for xhtml2pdf */
+        @font-face {
+            font-family: 'NotoSansHindi';
+            src: url('file:///{{ font_path }}');
+        }
+
         @page {
-            size: 3.15in 20in; /* 80mm width aur kaafi saari height */
+            size: 3.15in 20in; /* 80mm thermal printer height */
             margin: 0.1in;
         }
 
         body { 
-            font-family: Helvetica, sans-serif; 
+            font-family: 'NotoSansHindi', sans-serif;
             font-size: 12px; 
             color: #000; 
             margin: 0; 
@@ -80,10 +86,15 @@
         <tbody>
             {% for item in items %}
             <tr>
-                <td><span class="item-name">{{ item.product.name }}</span></td>
+                <td>
+                    <span class="item-name">
+                        {{ item.product.name }}
+                        {% if item.variant %} ({{ item.variant.weight_or_size|default:"" }}){% endif %}
+                    </span>
+                </td>
                 <td style="text-align: center;">{{ item.quantity }}</td>
                 <td>{{ item.price }}</td>
-                <td style="text-align: left;"> {{ item.get_cost|stringformat:".0f" }}</td>
+                <td style="text-align: left;"> Rs. {{ item.get_cost|stringformat:".0f" }}</td>
             </tr>
             {% endfor %}  
         </tbody>

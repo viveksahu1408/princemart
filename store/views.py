@@ -1,24 +1,25 @@
 # api code start from line number 630 here 
 from django.contrib.admin.views.decorators import staff_member_required
-from .models import Product, Order, OrderItem, Category, Banner,DeliveryZone
+from .models import Product, Order, OrderItem, Category, Banner, DeliveryZone
 import datetime
+import os
+from django.conf import settings
 from django.shortcuts import redirect, get_object_or_404, render
 from .forms import OrderForm
 from django.db.models import Q, Sum, Count
 from .utils import render_to_pdf 
+from django.db import transaction
 import csv # Excel export ke liye
 from django.http import HttpResponse
 from django.db.models.functions import TruncMonth
 from .models import Notification, Cart, CartItem # notification ke liye h 
-from django.core.exceptions import ObjectDoesNotExist # Ye error handle karne ke liye
-from django.http import JsonResponse # Sabse upar ye import kar
-from django.contrib.auth.models import User
+from django.core.exceptions import ObjectDoesNotExist
 from django.http import JsonResponse
+from django.contrib.auth.models import User
 from django.views.decorators.csrf import csrf_exempt
 import json
 from .utils import is_location_deliverable
 from django.contrib import messages
-
 
 # api vale 
 from rest_framework.decorators import api_view
@@ -26,22 +27,20 @@ from rest_framework.response import Response
 from rest_framework import status
 from .serializers import ProductSerializer, CategorySerializer, CartItemSerializer, OrderHistorySerializer
 from .models import Product, ProductVariant, Cart, CartItem, Category
-from django.views.decorators.csrf import csrf_exempt
 
 
-@staff_member_required # Sirf admin hi dekh payega
+# views.py me admin_dashboard function ko update karein:
+
+@staff_member_required
 def admin_dashboard(request):
-    # 1. Basic Stats cards ke liye
     total_products = Product.objects.count()
     total_orders = Order.objects.count()
     total_stock = Product.objects.aggregate(Sum('stock_quantity'))['stock_quantity__sum'] or 0
     
-    # 1. Date Filter Logic
     orders = Order.objects.all().order_by('-id')
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
 
-    # 1. Search Logic (Name or Mobile)
     search_query = request.GET.get('search_query')
     if search_query:
         orders = orders.filter(
@@ -50,49 +49,48 @@ def admin_dashboard(request):
         )
 
     if start_date and end_date:
-        # Agar date select ki hai to filter karo
         orders = orders.filter(date__range=[start_date, end_date])
 
-    pending_orders = Order.objects.filter(status=False).count()
+    pending_orders = Order.objects.filter(status=False, is_cancelled=False).count()
     completed_orders = Order.objects.filter(status=True).count()
 
-    # Sirf delivered orders ka total paisa
-    revenue = Order.objects.filter(status=True).aggregate(Sum('total_amount'))['total_amount__sum'] or 0
-
-    # Total Kamai (Sum)
     total_sales = Order.objects.filter(status=True).aggregate(Sum('total_amount'))['total_amount__sum'] or 0
-
-    # Recent 5 Orders
     recent_orders = Order.objects.all().order_by('-id')[:5]
 
-    # 2. Graph ke liye Data (Last 6 Months ki Sales)
+    # 📊 DYNAMIC GRAPH LOGIC (Last 6 Months Real-time Sales)
     today = datetime.date.today()
     months = []
     sales = []
 
-    # notification ke liye h ye 
-    admin_notifs = Notification.objects.filter(for_admin=True).order_by('-date')[:5]
-
     for i in range(5, -1, -1):
-        date_limit = today - datetime.timedelta(days=i*30)
-        month_name = date_limit.strftime('%B')
+        # Current month se picche 6 mahine calculate karne ke liye
+        year = today.year
+        month = today.month - i
+        if month <= 0:
+            month += 12
+            year -= 1
+        
+        date_obj = datetime.date(year, month, 1)
+        month_name = date_obj.strftime('%b %Y') # Format: Jan 2026
         months.append(month_name)
         
         monthly_sales = Order.objects.filter(
-            date__year=date_limit.year, 
-            date__month=date_limit.month, 
+            date__year=year, 
+            date__month=month, 
             status=True
         ).aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+        
         sales.append(int(monthly_sales))
+
+    admin_notifs = Notification.objects.filter(for_admin=True).order_by('-date')[:5]
 
     context = {
         'total_products': total_products,
         'orders': orders,
         'total_orders': total_orders,
         'total_stock': total_stock,
-        'revenue': revenue,
-        'months': months,
-        'sales': sales,
+        'months': json.dumps(months), # JS array ke liye JSON convert
+        'sales': json.dumps(sales),   # JS array ke liye JSON convert
         'pending_orders': pending_orders,
         'completed_orders': completed_orders,
         'total_sales': total_sales,
@@ -102,7 +100,6 @@ def admin_dashboard(request):
     return render(request, 'admin_dashboard.html', context)
 
 
-# home page 
 def home(request):
     products = Product.objects.all()
     categories = Category.objects.all()
@@ -125,7 +122,6 @@ def home(request):
     return render(request, 'index.html', context)
 
 
-# --- HELPER FUNCTION (Cart ID nikalne ke liye) ---
 def _cart_id(request):
     cart = request.session.session_key
     if not cart:
@@ -138,7 +134,6 @@ def _cart_id(request):
 # =========================================================================
 def add_to_cart(request, product_id):
     product = get_object_or_404(Product, id=product_id)
-
     variant_id = request.GET.get('variant_id')
     
     if not variant_id:
@@ -198,7 +193,7 @@ def add_to_cart(request, product_id):
 
 
 # =========================================================================
-# 2. CART DETAILS (Variant Price & Delivery Charge Logic) - UPDATED
+# 2. CART DETAILS
 # =========================================================================
 def cart_details(request):
     total_price = 0
@@ -224,7 +219,6 @@ def cart_details(request):
     except ObjectDoesNotExist:
         pass 
 
-    # 🚚 DELIVERY CHARGE LOGIC
     if total_price > 0 and total_price < 1000:
         delivery_charge = 15
     else:
@@ -243,7 +237,7 @@ def cart_details(request):
 
 
 # =========================================================================
-# 3. UPDATE CART (Variant Stock Validation)
+# 3. UPDATE CART
 # =========================================================================
 def update_cart(request, product_id, action):
     variant_id = request.GET.get('variant_id') 
@@ -281,7 +275,7 @@ def update_cart(request, product_id, action):
 
 
 # =========================================================================
-# 4. CHECKOUT & STOCK DECREMENT (With Delivery Charge) - UPDATED
+# 4. CHECKOUT & STOCK DECREMENT (FIXED VARIANT LINKING)
 # =========================================================================
 def checkout(request):
     try:
@@ -302,7 +296,6 @@ def checkout(request):
         else:
             total_price += (item.product.selling_price * item.quantity)
 
-    # 🚚 DELIVERY CHARGE LOGIC
     if total_price > 0 and total_price < 1000:
         delivery_charge = 15
     else:
@@ -317,7 +310,6 @@ def checkout(request):
             if request.user.is_authenticated:
                 order.user = request.user
             
-            # Save Grand Total (Items + Delivery Fee) in Database
             order.total_amount = grand_total
             order.save()
             request.session['customer_phone'] = order.customer_phone
@@ -332,9 +324,11 @@ def checkout(request):
             for item in cart_items:
                 final_price = item.variant.selling_price if item.variant else item.product.selling_price
                 
+                # 🔥 FIX HERE: Added variant=item.variant so cancellation works perfectly!
                 OrderItem.objects.create(
                     order=order,
                     product=item.product,
+                    variant=item.variant,
                     price=final_price,
                     quantity=item.quantity
                 )
@@ -418,14 +412,16 @@ def order_invoice(request, order_id):
     order = get_object_or_404(Order, id=order_id)
     items = OrderItem.objects.filter(order=order)
 
-    # Items ka total sum
     items_total = sum(item.get_cost() for item in items)
 
-    # Delivery Charge calculation
     if order.total_amount > items_total:
         delivery_charge = order.total_amount - items_total
     else:
         delivery_charge = 0
+
+    # Windows Path Fix: Backslash ko Forwardslash me convert kar rahe hain
+    raw_font_path = os.path.join(settings.BASE_DIR, 'static', 'fonts', 'NotoSans.ttf')
+    font_path = raw_font_path.replace('\\', '/')
 
     context = {
         'order': order,
@@ -433,9 +429,9 @@ def order_invoice(request, order_id):
         'items_total': items_total,
         'delivery_charge': delivery_charge,
         'today': datetime.date.today(),
+        'font_path': font_path,
     }
     return render_to_pdf('invoice.html', context)
-
 
 
 def packing_list(request, order_id):
@@ -557,42 +553,31 @@ def terms_conditions(request):
     return render(request, 'terms_conditions.html')    
 
 
-@csrf_exempt
-def check_delivery_availability(request):
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            lat = float(data.get('lat'))
-            lng = float(data.get('lng'))
-            
-            deliverable = is_location_deliverable(lat, lng)
-            
-            if deliverable:
-                return JsonResponse({'available': True, 'message': 'Delivery is available at your location.'})
-            else:
-                return JsonResponse({'available': False, 'message': 'Sorry, we do not deliver to this location currently.'})
-        except Exception as e:
-            return JsonResponse({'available': False, 'error': str(e)}, status=400)
-            
-    return JsonResponse({'error': 'Only POST method allowed'}, status=405)
-
+# =========================================================================
+# 5. ORDER CANCELLATION & STOCK RESTORATION
+# =========================================================================
 def cancel_order(request, order_id):
     order = get_object_or_404(Order, id=order_id)
     
     if not order.status and not order.is_cancelled:
-        order.is_cancelled = True
-        order.save()
-        
-        # Stock restore logic
-        for item in order.orderitem_set.all():
-            if item.variant:
-                item.variant.stock_quantity += item.quantity
-                item.variant.save()
-            elif item.product:
-                item.product.stock_quantity += item.quantity
-                item.product.save()
-                
-        messages.success(request, f"Order #{order.id} cancel ho gaya hai.")
+        with transaction.atomic():
+            order.is_cancelled = True
+            order.save()
+            
+            for item in order.orderitem_set.all():
+                if item.variant:
+                    item.variant.stock_quantity += item.quantity
+                    item.variant.save()
+                elif item.product:
+                    first_variant = item.product.variants.filter(is_active=True).first()
+                    if first_variant:
+                        first_variant.stock_quantity += item.quantity
+                        first_variant.save()
+                    else:
+                        item.product.stock_quantity += item.quantity
+                        item.product.save()
+
+        messages.success(request, f"Order #{order.id} cancel ho gaya hai aur stock restore kar diya gaya hai. 🔄")
     else:
         messages.error(request, "Is order ko cancel nahi kiya ja sakta.")
         
@@ -600,6 +585,7 @@ def cancel_order(request, order_id):
     if phone:
         return redirect(f'/my-orders/?phone={phone}')
     return redirect('my_orders')
+
 
 # =========================================================================
 # API CODE STARTS FROM HERE
@@ -677,7 +663,6 @@ def api_add_to_cart(request):
     }, status=status.HTTP_200_OK)
 
 
-# 1. GET API: Cart ke saare items, Delivery Fee aur Grand Total - UPDATED
 @api_view(['GET'])
 def api_cart_view(request):
     try:
@@ -697,7 +682,6 @@ def api_cart_view(request):
     total_price = sum(item.variant.selling_price * item.quantity for item in cart_items)
     cart_count = sum(item.quantity for item in cart_items)
 
-    # 🚚 DELIVERY CHARGE LOGIC FOR API
     if total_price > 0 and total_price < 1000:
         delivery_charge = 15
     else:
@@ -714,7 +698,6 @@ def api_cart_view(request):
     }, status=status.HTTP_200_OK)
 
 
-# 2. POST API: Cart se quantity kam karne ya delete karne ke liye - UPDATED
 @api_view(['POST'])
 def api_remove_from_cart(request):
     product_id = request.data.get('product_id')
@@ -745,7 +728,6 @@ def api_remove_from_cart(request):
     total_price = sum(item.variant.selling_price * item.quantity for item in cart_items)
     cart_count = sum(item.quantity for item in cart_items)
 
-    # 🚚 DELIVERY CHARGE LOGIC
     if total_price > 0 and total_price < 1000:
         delivery_charge = 15
     else:
@@ -763,7 +745,6 @@ def api_remove_from_cart(request):
     }, status=status.HTTP_200_OK)
 
 
-# 3. POST API: API Order Place with Delivery Charge - UPDATED
 @api_view(['POST'])
 @csrf_exempt
 def api_place_order(request):
@@ -786,7 +767,6 @@ def api_place_order(request):
 
     total_price = sum(item.variant.selling_price * item.quantity for item in cart_items)
     
-    # 🚚 DELIVERY CHARGE LOGIC
     if total_price > 0 and total_price < 1000:
         delivery_charge = 15
     else:
@@ -794,14 +774,13 @@ def api_place_order(request):
 
     grand_total = total_price + delivery_charge
 
-    # 🛒 Order Table me data save (delivery charge included in total_amount)
     order = Order.objects.create(
         customer_name=customer_name,
         customer_phone=customer_phone,
         address_details=address_details,
         area=area,
         total_amount=grand_total,  
-        status=True
+        status=False
     )
     
     for item in cart_items:
@@ -893,13 +872,10 @@ def api_legal_urls(request):
     }
     return JsonResponse(data)
 
+
 # open street map adding lan-lat
 def is_location_deliverable(user_lat, user_lng):
-    """
-    Returns True if (user_lat, user_lng) falls inside any active DeliveryZone polygon.
-    """
     from .models import DeliveryZone
-    
     zones = DeliveryZone.objects.filter(is_active=True)
     
     for zone in zones:
@@ -907,7 +883,6 @@ def is_location_deliverable(user_lat, user_lng):
         if not coords or len(coords) < 3:
             continue
             
-        # Ray-casting Algorithm
         inside = False
         n = len(coords)
         p1lat, p1lng = float(coords[0]['lat']), float(coords[0]['lng'])
@@ -928,6 +903,7 @@ def is_location_deliverable(user_lat, user_lng):
             
     return False
 
+
 @csrf_exempt
 def check_delivery_availability(request):
     if request.method == 'POST':
@@ -939,22 +915,9 @@ def check_delivery_availability(request):
             is_deliverable = is_location_deliverable(lat, lng)
 
             if is_deliverable:
-                return JsonResponse(
-                    {
-                        'available': True,
-                        'message': 'Delivery is available at your location.',
-                    }
-                )
+                return JsonResponse({'available': True, 'message': 'Delivery is available at your location.'})
             else:
-                return JsonResponse(
-                    {
-                        'available': False,
-                        'message': (
-                            'Sorry, we do not deliver to this location'
-                            ' currently.'
-                        ),
-                    }
-                )
+                return JsonResponse({'available': False, 'message': 'Sorry, we do not deliver to this location currently.'})
         except Exception as e:
             return JsonResponse({'available': False, 'error': str(e)}, status=400)
 
