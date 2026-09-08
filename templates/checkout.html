@@ -10,12 +10,16 @@
             <div class="card-body">
                 <!-- Delivery Area Error Banner -->
                 <div id="delivery-block-msg" class="alert alert-danger shadow-sm mb-3 d-none" role="alert">
-                    <i class="fas fa-ban me-2"></i> <strong>Delivery Unavailable:</strong> Aapki location hamare delivery area se baahar hai. Is location par order place nahi kiya ja sakta.
+                    <i class="fas fa-ban me-2"></i> <strong>Delivery Unavailable:</strong> Aapki location hamare delivery area se baahar hai. Redirecting to Home...
                 </div>
 
-                <form method="POST">
+                <form method="POST" id="checkout-form">
                     {% csrf_token %}
                     
+                    <!-- Hidden Lat / Lng inputs backend validation ke liye -->
+                    <input type="hidden" name="user_lat" id="user_lat">
+                    <input type="hidden" name="user_lng" id="user_lng">
+
                     <div class="mb-3">
                         <label class="form-label fw-bold">Naam</label>
                         {{ form.customer_name }}
@@ -38,8 +42,9 @@
                         {{ form.address_details }}
                     </div>
 
-                    <button type="submit" id="place-order-btn" class="btn btn-success w-100 py-2 mt-3 fw-bold">
-                        Confirm Order (₹{{ grand_total }})
+                    <!-- Button default disabled rakha hai jab tak JS location verify na kar le -->
+                    <button type="submit" id="place-order-btn" class="btn btn-secondary w-100 py-2 mt-3 fw-bold" disabled>
+                        Verifying Location...
                     </button>
                 </form>
             </div>
@@ -99,20 +104,18 @@
 
 <div style="height: 100px;"></div>
 
-<!-- CHECKOUT LOCATION & AUTO-FILL SCRIPT -->
+<!-- FAST LOCATION & FAST BLOCK SCRIPT -->
 <script>
 document.addEventListener("DOMContentLoaded", function () {
     const placeOrderBtn = document.getElementById("place-order-btn");
     const blockMsg = document.getElementById("delivery-block-msg");
-    const form = document.querySelector("form");
+    const form = document.getElementById("checkout-form");
 
-    // Form Fields Selectors
     const nameInput = document.querySelector('[name="customer_name"]');
     const phoneInput = document.querySelector('[name="customer_phone"]');
     const areaInput = document.querySelector('[name="area"]');
     const addressInput = document.querySelector('[name="address_details"]');
 
-    // AUTO-FILL SAVED DETAILS ON LOAD
     if (localStorage.getItem("customer_phone")) {
         if (nameInput && localStorage.getItem("customer_name")) nameInput.value = localStorage.getItem("customer_name");
         if (phoneInput && localStorage.getItem("customer_phone")) phoneInput.value = localStorage.getItem("customer_phone");
@@ -120,7 +123,6 @@ document.addEventListener("DOMContentLoaded", function () {
         if (addressInput && localStorage.getItem("customer_address")) addressInput.value = localStorage.getItem("customer_address");
     }
 
-    // SAVE DETAILS ON FORM SUBMIT
     if (form) {
         form.addEventListener("submit", function () {
             if (nameInput) localStorage.setItem("customer_name", nameInput.value);
@@ -130,14 +132,22 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    // Location verification logic
+    // Fast Location Trigger
     if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(verifyCheckoutLocation, handleGeoError);
+        navigator.geolocation.getCurrentPosition(verifyCheckoutLocation, handleGeoError, {
+            timeout: 5000,
+            maximumAge: 60000
+        });
+    } else {
+        enableButtonFallback();
     }
 
     function verifyCheckoutLocation(position) {
         const lat = position.coords.latitude;
         const lng = position.coords.longitude;
+
+        document.getElementById("user_lat").value = lat;
+        document.getElementById("user_lng").value = lng;
 
         fetch('/api/check-delivery/', {
             method: 'POST',
@@ -153,29 +163,38 @@ document.addEventListener("DOMContentLoaded", function () {
                 if (placeOrderBtn) {
                     placeOrderBtn.disabled = true;
                     placeOrderBtn.classList.remove("btn-success");
-                    placeOrderBtn.classList.add("btn-secondary");
-                    placeOrderBtn.innerText = "Delivery Not Available Here";
+                    placeOrderBtn.classList.add("btn-danger");
+                    placeOrderBtn.innerText = "Location Not Deliverable";
                 }
-                if (blockMsg) {
-                    blockMsg.classList.remove("d-none");
-                }
+                if (blockMsg) blockMsg.classList.remove("d-none");
+                
+                // Out of location status milte hi direct Home page Redirect
+                setTimeout(() => {
+                    alert("Aapki location hamare delivery zone se bahar hai!");
+                    window.location.href = "/";
+                }, 800);
             } else {
-                if (placeOrderBtn) {
-                    placeOrderBtn.disabled = false;
-                    placeOrderBtn.classList.remove("btn-secondary");
-                    placeOrderBtn.classList.add("btn-success");
-                    placeOrderBtn.innerText = "Confirm Order (₹{{ grand_total }})";
-                }
-                if (blockMsg) {
-                    blockMsg.classList.add("d-none");
-                }
+                enableButtonFallback();
             }
         })
-        .catch(err => console.error("Checkout Location Check Error:", err));
+        .catch(err => {
+            console.error("Location Check Error:", err);
+            enableButtonFallback();
+        });
     }
 
     function handleGeoError(err) {
-        console.log("Location access not granted on checkout page.");
+        console.log("Location access issue:", err);
+        enableButtonFallback();
+    }
+
+    function enableButtonFallback() {
+        if (placeOrderBtn) {
+            placeOrderBtn.disabled = false;
+            placeOrderBtn.classList.remove("btn-secondary", "btn-danger");
+            placeOrderBtn.classList.add("btn-success");
+            placeOrderBtn.innerText = "Confirm Order (₹{{ grand_total }})";
+        }
     }
 });
 </script>

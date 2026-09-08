@@ -273,9 +273,8 @@ def update_cart(request, product_id, action):
 
     return redirect('cart')
 
-
 # =========================================================================
-# 4. CHECKOUT & STOCK DECREMENT (FIXED VARIANT LINKING)
+# 4. CHECKOUT & STOCK DECREMENT (WITH HARD LOCATION GUARD)
 # =========================================================================
 def checkout(request):
     try:
@@ -304,6 +303,20 @@ def checkout(request):
     grand_total = total_price + delivery_charge
 
     if request.method == 'POST':
+        # Hard Server-Side Location Verification Check
+        user_lat = request.POST.get('user_lat')
+        user_lng = request.POST.get('user_lng')
+
+        if user_lat and user_lng:
+            try:
+                lat_float = float(user_lat)
+                lng_float = float(user_lng)
+                if not is_location_deliverable(lat_float, lng_float):
+                    messages.error(request, "Aapki location hamare delivery area se bahar hai!")
+                    return redirect('home')
+            except ValueError:
+                pass
+
         form = OrderForm(request.POST)
         if form.is_valid():
             order = form.save(commit=False)
@@ -324,7 +337,6 @@ def checkout(request):
             for item in cart_items:
                 final_price = item.variant.selling_price if item.variant else item.product.selling_price
                 
-                # 🔥 FIX HERE: Added variant=item.variant so cancellation works perfectly!
                 OrderItem.objects.create(
                     order=order,
                     product=item.product,
@@ -363,7 +375,6 @@ def checkout(request):
         'grand_total': grand_total
     }
     return render(request, 'checkout.html', context)
-
 
 def my_orders(request):
     customer_info = {}
