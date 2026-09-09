@@ -40,7 +40,7 @@ urlpatterns = [
     path('api/search/', views.api_product_search, name='api_product_search'),
     path('api/legal-links/', views.api_legal_urls, name='api_legal_urls'),
     path('api/check-delivery/',views.check_delivery_availability,name='check_delivery',),
-
+    path('api/cancel-order/', views.api_cancel_order, name='api_cancel_order'),
 
 
 ]

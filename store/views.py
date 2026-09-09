@@ -933,3 +933,47 @@ def check_delivery_availability(request):
             return JsonResponse({'available': False, 'error': str(e)}, status=400)
 
     return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+
+# =========================================================================
+# API: CANCEL ORDER & RESTORE STOCK FOR MOBILE APP
+# =========================================================================
+@api_view(['POST'])
+def api_cancel_order(request):
+    order_id = request.data.get('order_id')
+    
+    if not order_id:
+        return Response({'status': 'error', 'message': 'order_id zaroori hai!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        order = Order.objects.get(id=order_id)
+    except Order.DoesNotExist:
+        return Response({'status': 'error', 'message': 'Order nahi mila!'}, status=status.HTTP_404_NOT_FOUND)
+
+    if order.status:
+        return Response({'status': 'error', 'message': 'Delivered order cancel nahi ho sakta!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if order.is_cancelled:
+        return Response({'status': 'error', 'message': 'Order pehle se hi cancelled hai!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    with transaction.atomic():
+        order.is_cancelled = True
+        order.save()
+        
+        for item in order.orderitem_set.all():
+            if item.variant:
+                item.variant.stock_quantity += item.quantity
+                item.variant.save()
+            elif item.product:
+                first_variant = item.product.variants.filter(is_active=True).first()
+                if first_variant:
+                    first_variant.stock_quantity += item.quantity
+                    first_variant.save()
+                else:
+                    item.product.stock_quantity += item.quantity
+                    item.product.save()
+
+    return Response({
+        'status': 'success',
+        'message': f'Order #{order.id} cancel kar diya gaya hai aur stock restore ho gaya.'
+    }, status=status.HTTP_200_OK)
