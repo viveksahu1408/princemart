@@ -979,29 +979,57 @@ def api_cancel_order(request):
     }, status=status.HTTP_200_OK)
 
 # 1. Location check karne ke liye API
+
+# 1. Location delivers check function (Safely Handled)
+def is_location_deliverable(user_lat, user_lng):
+    try:
+        from .models import DeliveryZone
+        zones = DeliveryZone.objects.filter(is_active=True)
+        
+        for zone in zones:
+            coords = zone.get_coordinates_list()
+            if not coords or len(coords) < 3:
+                continue
+                
+            inside = False
+            n = len(coords)
+            p1lat, p1lng = float(coords[0]['lat']), float(coords[0]['lng'])
+            
+            for i in range(n + 1):
+                p2lat, p2lng = float(coords[i % n]['lat']), float(coords[i % n]['lng'])
+                if user_lat > min(p1lat, p2lat):
+                    if user_lat <= max(p1lat, p2lat):
+                        if user_lng <= max(p1lng, p2lng):
+                            if p1lat != p2lat:
+                                xinters = (user_lat - p1lat) * (p2lng - p1lng) / (p2lat - p1lat) + p1lng
+                            if p1lng == p2lng or user_lng <= xinters:
+                                inside = not inside
+                p1lat, p1lng = p2lat, p2lng
+                
+            if inside:
+                return True
+                
+        return False
+    except Exception:
+        return False
+
+
+# 2. Location API Endpoint
 @api_view(['POST'])
 def check_delivery_availability(request):
     try:
         lat = float(request.data.get('lat', 0))
         lng = float(request.data.get('lng', 0))
 
+        if not lat or not lng:
+            return Response({'available': False, 'message': 'Latitude aur Longitude dono required hain.'}, status=status.HTTP_400_BAD_REQUEST)
+
         is_deliverable = is_location_deliverable(lat, lng)
 
         if is_deliverable:
-            return Response({'available': True, 'message': 'Delivery is available at your location.'}, status=status.HTTP_200_OK)
+            return Response({'available': True, 'message': 'Delivery available hai! 🎉'}, status=status.HTTP_200_OK)
         else:
-            return Response({'available': False, 'message': 'Sorry, we do not deliver to this location currently.'}, status=status.HTTP_200_OK)
-    except (ValueError, TypeError):
-        return Response({'available': False, 'error': 'Invalid lat or lng values'}, status=status.HTTP_400_BAD_REQUEST)
-
-# 2. Map zones ke coordinates ke liye API
-@api_view(['GET'])
-def api_delivery_zones(request):
-    zones = DeliveryZone.objects.filter(is_active=True)
-    data = []
-    for zone in zones:
-        data.append({
-            'name': zone.name,
-            'coordinates': zone.get_coordinates_list()
-        })
-    return Response({'zones': data}, status=status.HTTP_200_OK)
+            return Response({'available': False, 'message': 'Hum abhi is location par deliver nahi karte.'}, status=status.HTTP_200_OK)
+            
+    except Exception as e:
+        return Response({'available': False, 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
