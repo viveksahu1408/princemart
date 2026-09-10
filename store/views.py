@@ -885,54 +885,6 @@ def api_legal_urls(request):
 
 
 # open street map adding lan-lat
-def is_location_deliverable(user_lat, user_lng):
-    from .models import DeliveryZone
-    zones = DeliveryZone.objects.filter(is_active=True)
-    
-    for zone in zones:
-        coords = zone.get_coordinates_list()
-        if not coords or len(coords) < 3:
-            continue
-            
-        inside = False
-        n = len(coords)
-        p1lat, p1lng = float(coords[0]['lat']), float(coords[0]['lng'])
-        
-        for i in range(n + 1):
-            p2lat, p2lng = float(coords[i % n]['lat']), float(coords[i % n]['lng'])
-            if user_lat > min(p1lat, p2lat):
-                if user_lat <= max(p1lat, p2lat):
-                    if user_lng <= max(p1lng, p2lng):
-                        if p1lat != p2lat:
-                            xinters = (user_lat - p1lat) * (p2lng - p1lng) / (p2lat - p1lat) + p1lng
-                        if p1lng == p2lng or user_lng <= xinters:
-                            inside = not inside
-            p1lat, p1lng = p2lat, p2lng
-            
-        if inside:
-            return True
-            
-    return False
-
-
-@csrf_exempt
-def check_delivery_availability(request):
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            lat = float(data.get('lat'))
-            lng = float(data.get('lng'))
-
-            is_deliverable = is_location_deliverable(lat, lng)
-
-            if is_deliverable:
-                return JsonResponse({'available': True, 'message': 'Delivery is available at your location.'})
-            else:
-                return JsonResponse({'available': False, 'message': 'Sorry, we do not deliver to this location currently.'})
-        except Exception as e:
-            return JsonResponse({'available': False, 'error': str(e)}, status=400)
-
-    return JsonResponse({'error': 'Invalid request method'}, status=405)
 
 # =========================================================================
 # HELPER: LOCATION DELIVERABLE CHECK (Polygon ray casting algorithm)
