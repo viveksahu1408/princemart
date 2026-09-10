@@ -980,19 +980,19 @@ def api_cancel_order(request):
 
 # 1. Location check karne ke liye API
 @api_view(['POST'])
-def api_check_delivery(request):
+def check_delivery_availability(request):
     try:
-        lat = float(request.data.get('lat'))
-        lng = float(request.data.get('lng'))
-        
-        available = is_location_deliverable(lat, lng)
-        if available:
-            return Response({'available': True, 'message': 'Delivery available hai!'}, status=status.HTTP_200_OK)
-        else:
-            return Response({'available': False, 'message': 'Hum abhi is area me deliver nahi karte.'}, status=status.HTTP_200_OK)
-    except (TypeError, ValueError):
-        return Response({'status': 'error', 'message': 'Valid lat aur lng zaroori hain!'}, status=status.HTTP_400_BAD_REQUEST)
+        lat = float(request.data.get('lat', 0))
+        lng = float(request.data.get('lng', 0))
 
+        is_deliverable = is_location_deliverable(lat, lng)
+
+        if is_deliverable:
+            return Response({'available': True, 'message': 'Delivery is available at your location.'}, status=status.HTTP_200_OK)
+        else:
+            return Response({'available': False, 'message': 'Sorry, we do not deliver to this location currently.'}, status=status.HTTP_200_OK)
+    except (ValueError, TypeError):
+        return Response({'available': False, 'error': 'Invalid lat or lng values'}, status=status.HTTP_400_BAD_REQUEST)
 
 # 2. Map zones ke coordinates ke liye API
 @api_view(['GET'])
