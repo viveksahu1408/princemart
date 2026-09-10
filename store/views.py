@@ -934,53 +934,9 @@ def check_delivery_availability(request):
 
     return JsonResponse({'error': 'Invalid request method'}, status=405)
 
-
 # =========================================================================
-# API: CANCEL ORDER & RESTORE STOCK FOR MOBILE APP
+# HELPER: LOCATION DELIVERABLE CHECK (Polygon ray casting algorithm)
 # =========================================================================
-@api_view(['POST'])
-def api_cancel_order(request):
-    order_id = request.data.get('order_id')
-    
-    if not order_id:
-        return Response({'status': 'error', 'message': 'order_id zaroori hai!'}, status=status.HTTP_400_BAD_REQUEST)
-
-    try:
-        order = Order.objects.get(id=order_id)
-    except Order.DoesNotExist:
-        return Response({'status': 'error', 'message': 'Order nahi mila!'}, status=status.HTTP_404_NOT_FOUND)
-
-    if order.status:
-        return Response({'status': 'error', 'message': 'Delivered order cancel nahi ho sakta!'}, status=status.HTTP_400_BAD_REQUEST)
-
-    if order.is_cancelled:
-        return Response({'status': 'error', 'message': 'Order pehle se hi cancelled hai!'}, status=status.HTTP_400_BAD_REQUEST)
-
-    with transaction.atomic():
-        order.is_cancelled = True
-        order.save()
-        
-        for item in order.orderitem_set.all():
-            if item.variant:
-                item.variant.stock_quantity += item.quantity
-                item.variant.save()
-            elif item.product:
-                first_variant = item.product.variants.filter(is_active=True).first()
-                if first_variant:
-                    first_variant.stock_quantity += item.quantity
-                    first_variant.save()
-                else:
-                    item.product.stock_quantity += item.quantity
-                    item.product.save()
-
-    return Response({
-        'status': 'success',
-        'message': f'Order #{order.id} cancel kar diya gaya hai aur stock restore ho gaya.'
-    }, status=status.HTTP_200_OK)
-
-# 1. Location check karne ke liye API
-
-# 1. Location delivers check function (Safely Handled)
 def is_location_deliverable(user_lat, user_lng):
     try:
         from .models import DeliveryZone
@@ -1014,7 +970,9 @@ def is_location_deliverable(user_lat, user_lng):
         return False
 
 
-# 2. Location API Endpoint
+# =========================================================================
+# API: CHECK DELIVERY AVAILABILITY
+# =========================================================================
 @api_view(['POST'])
 def check_delivery_availability(request):
     try:
@@ -1033,3 +991,48 @@ def check_delivery_availability(request):
             
     except Exception as e:
         return Response({'available': False, 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# =========================================================================
+# API: CANCEL ORDER & RESTORE STOCK FOR MOBILE APP
+# =========================================================================
+@api_view(['POST'])
+def api_cancel_order(request):
+    order_id = request.data.get('order_id')
+    
+    if not order_id:
+        return Response({'status': 'error', 'message': 'order_id zaroori hai!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        order = Order.objects.get(id=order_id)
+    except Order.DoesNotExist:
+        return Response({'status': 'error', 'message': 'Order nahi mila!'}, status=status.HTTP_404_NOT_FOUND)
+
+    if order.status:
+        return Response({'status': 'error', 'message': 'Delivered order cancel nahi ho sakta!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if order.is_cancelled:
+        return Response({'status': 'error', 'message': 'Order pehle se hi cancelled hai!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    with transaction.atomic():
+        order.is_cancelled = True
+        order.save()
+        
+        for item in order.orderitem_set.all():
+            if item.variant:
+                item.variant.stock_quantity += item.quantity
+                item.variant.save()
+                
+                # Associated product total_sold decrement if needed
+                if item.product:
+                    item.product.total_sold = max(0, item.product.total_sold - item.quantity)
+                    item.product.save()
+            elif item.product:
+                item.product.stock_quantity += item.quantity
+                item.product.total_sold = max(0, item.product.total_sold - item.quantity)
+                item.product.save()
+
+    return Response({
+        'status': 'success',
+        'message': f'Order #{order.id} cancel kar diya gaya hai aur stock restore ho gaya.'
+    }, status=status.HTTP_200_OK)
