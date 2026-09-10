@@ -41,6 +41,7 @@ urlpatterns = [
     path('api/legal-links/', views.api_legal_urls, name='api_legal_urls'),
     path('api/check-delivery/',views.check_delivery_availability,name='check_delivery',),
     path('api/cancel-order/', views.api_cancel_order, name='api_cancel_order'),
-
+    path('api/check-delivery/', views.api_check_delivery, name='api_check_delivery'),
+    path('api/delivery-zones/', views.api_delivery_zones, name='api_delivery_zones'),
 
 ]

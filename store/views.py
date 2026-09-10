@@ -977,3 +977,31 @@ def api_cancel_order(request):
         'status': 'success',
         'message': f'Order #{order.id} cancel kar diya gaya hai aur stock restore ho gaya.'
     }, status=status.HTTP_200_OK)
+
+# 1. Location check karne ke liye API
+@api_view(['POST'])
+def api_check_delivery(request):
+    try:
+        lat = float(request.data.get('lat'))
+        lng = float(request.data.get('lng'))
+        
+        available = is_location_deliverable(lat, lng)
+        if available:
+            return Response({'available': True, 'message': 'Delivery available hai!'}, status=status.HTTP_200_OK)
+        else:
+            return Response({'available': False, 'message': 'Hum abhi is area me deliver nahi karte.'}, status=status.HTTP_200_OK)
+    except (TypeError, ValueError):
+        return Response({'status': 'error', 'message': 'Valid lat aur lng zaroori hain!'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+# 2. Map zones ke coordinates ke liye API
+@api_view(['GET'])
+def api_delivery_zones(request):
+    zones = DeliveryZone.objects.filter(is_active=True)
+    data = []
+    for zone in zones:
+        data.append({
+            'name': zone.name,
+            'coordinates': zone.get_coordinates_list()
+        })
+    return Response({'zones': data}, status=status.HTTP_200_OK)

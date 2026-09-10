@@ -85,8 +85,7 @@ class OrderItemSerializer(serializers.ModelSerializer):
         fields = ['id', 'product_name', 'variant_size', 'product_unit', 'quantity', 'price']
 
 
-# 2. Main Order History Ke Liye
-# 2. Main Order History Ke Liye (Updated with total_amount)
+# 2. Main Order History Ke Liye (Updated with is_cancelled and total_amount)
 class OrderHistorySerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(source='orderitem_set', many=True, read_only=True)
     invoice_url = serializers.SerializerMethodField()
@@ -97,8 +96,9 @@ class OrderHistorySerializer(serializers.ModelSerializer):
         fields = [
             'id', 
             'date_formatted', 
-            'total_amount',  # 👈 Tumhare template ke hisab se exact name
+            'total_amount', 
             'status', 
+            'is_cancelled',  # App developer ke liye status check
             'items', 
             'invoice_url'
         ]
