@@ -928,13 +928,26 @@ def is_location_deliverable(user_lat, user_lng):
 @api_view(['POST'])
 def check_delivery_availability(request):
     try:
-        lat = float(request.data.get('lat', 0))
-        lng = float(request.data.get('lng', 0))
+        data = request.data
+        lat = data.get('lat')
+        lng = data.get('lng')
 
-        if not lat or not lng:
-            return Response({'available': False, 'message': 'Latitude aur Longitude dono required hain.'}, status=status.HTTP_400_BAD_REQUEST)
+        if lat is None or lng is None:
+            return Response({
+                'available': False, 
+                'message': 'Latitude (lat) aur Longitude (lng) dono JSON body me bhejo.'
+            }, status=status.HTTP_400_BAD_REQUEST)
 
-        is_deliverable = is_location_deliverable(lat, lng)
+        try:
+            lat_float = float(lat)
+            lng_float = float(lng)
+        except (ValueError, TypeError):
+            return Response({
+                'available': False, 
+                'message': 'Invalid latitude/longitude value!'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        is_deliverable = is_location_deliverable(lat_float, lng_float)
 
         if is_deliverable:
             return Response({'available': True, 'message': 'Delivery available hai! 🎉'}, status=status.HTTP_200_OK)
@@ -943,8 +956,6 @@ def check_delivery_availability(request):
             
     except Exception as e:
         return Response({'available': False, 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
 # =========================================================================
 # API: CANCEL ORDER & RESTORE STOCK FOR MOBILE APP
 # =========================================================================
