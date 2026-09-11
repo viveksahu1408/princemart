@@ -1,12 +1,11 @@
 from django.contrib import admin
-from .models import Category,DeliveryZone, Product, ProductVariant, Order, OrderItem, Banner, Notification
+from .models import Category, DeliveryZone, Product, ProductVariant, Order, OrderItem, Banner, Notification
 from django.utils.html import format_html
 from django.urls import reverse
 from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin
-from django.apps import AppConfig
-from django.db.models import Sum
 from django.db.models import Min
+from django.contrib import messages
 
 # =========================================================================
 # 1. CATEGORY REGISTRATION
@@ -19,18 +18,18 @@ admin.site.register(Category)
 # =========================================================================
 class ProductVariantInline(admin.TabularInline):
     model = ProductVariant
-    extra = 1  # Ek khali row hamesha dikhegi naya variant (weight/color) jodne ke liye
-    fields = ['image','weight_or_size', 'color', 'market_price', 'selling_price', 'cost_price', 'stock_quantity', 'total_sold', 'is_active']
+    extra = 1  # Ek khali row hamesha dikhegi naya variant jodne ke liye
+    fields = ['image', 'weight_or_size', 'color', 'market_price', 'selling_price', 'cost_price', 'stock_quantity', 'total_sold', 'is_active']
 
 
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ('name', 'category', 'variant_type', 'unit', 'stock_status', 'total_sold',)
-    search_fields = ('name', 'category__name',)
-    list_filter = ('category', 'variant_type',)
+    list_display = ('name', 'category', 'variant_type', 'unit', 'stock_status', 'total_sold')
+    search_fields = ('name', 'category__name')
+    list_filter = ('category', 'variant_type')
     
     inlines = [ProductVariantInline]
 
-    # 🔥 Database sorting: Jo variant sabse kam stock wala hai, uske hisab se product upar aayega
+    # Database sorting: Jo variant sabse kam stock wala hai, uske hisab se product upar aayega
     def get_queryset(self, request):
         queryset = super().get_queryset(request)
         queryset = queryset.annotate(
@@ -38,7 +37,7 @@ class ProductAdmin(admin.ModelAdmin):
         )
         return queryset.order_by('annotated_stock')
 
-    # 🔥 DYNAMIC FIX: Exact Number aur Variant ke Naam ke sath upar lana
+    # DYNAMIC FIX: Exact Number aur Variant ke Naam ke sath alert dikhana
     def stock_status(self, obj):
         active_variants = obj.variants.filter(is_active=True)
         if not active_variants.exists():
@@ -47,15 +46,13 @@ class ProductAdmin(admin.ModelAdmin):
         # Sabse kam stock wala variant dhoondte hain
         lowest_variant = min(active_variants, key=lambda v: v.stock_quantity)
         qty = lowest_variant.stock_quantity
-        name = lowest_variant.weight_or_size  # Jaise '1 Kg', '250 Gm', '1 Pcs'
+        name = lowest_variant.weight_or_size  # Jaise '1 Kg', '250 Gm'
         
         if qty == 0:
             return format_html('<b style="color: #e74c3c;">{} - 0 Bacha (Khatam)</b>', name)
         elif qty <= 5:
-            # 5 ya usse kam bacha hone par Orange alert exact number ke sath
             return format_html('<b style="color: #e67e22;">{} - {} Bacha</b>', name, qty)
         else:
-            # Safe zone ke liye simple green count
             return format_html('<span style="color: #2ecc71; font-weight: bold;">✅ {} - {} Bacha</span>', name, qty)
 
     stock_status.short_description = "Lowest Variant Stock"
@@ -63,17 +60,36 @@ class ProductAdmin(admin.ModelAdmin):
 
 admin.site.register(Product, ProductAdmin)
 
-# ⚠️ NOTE: Purani duplicate 'admin.site.register(ProductVariant)' line yahan se hata di gayi hai!
-
 
 # =========================================================================
-# 3. ORDER & ORDER ITEMS (BILLING & BUTTONS SYSTEM)
+# 3. ORDER & ORDER ITEMS (BILLING, ACTIONS & AUTO-STOCK RESTORE SYSTEM)
 # =========================================================================
 def mark_as_delivered(modeladmin, request, queryset):
     updated_count = queryset.update(status=True)
     modeladmin.message_user(request, f"{updated_count} Orders ko 'Delivered' mark kar diya gaya hai. ✅")
 
 mark_as_delivered.short_description = "Mark selected orders as Delivered"
+
+
+@admin.action(description='Selected Orders ko Cancel karein aur Stock Restore karein')
+def cancel_selected_orders(modeladmin, request, queryset):
+    cancelled_count = 0
+    for order in queryset:
+        if not order.is_cancelled and not order.status:
+            order.is_cancelled = True
+            order.save()
+            
+            # Auto Stock Restore
+            for item in order.orderitem_set.all():
+                if item.variant:
+                    item.variant.stock_quantity += item.quantity
+                    item.variant.save()
+                elif item.product:
+                    item.product.stock_quantity += item.quantity
+                    item.product.save()
+            cancelled_count += 1
+            
+    modeladmin.message_user(request, f"{cancelled_count} orders cancel karke unka stock restore kar diya gaya hai. 🔄", messages.SUCCESS)
 
 
 class OrderItemInline(admin.TabularInline):
@@ -92,24 +108,44 @@ class OrderAdmin(admin.ModelAdmin):
         
     formatted_address.short_description = 'Customer Address'
 
-    list_display = ('id', 'customer_name', 'formatted_address', 'total_amount', 'status', 'is_paid', 'order_actions') 
+    list_display = ('id', 'customer_name', 'formatted_address', 'total_amount', 'status', 'is_cancelled', 'is_paid', 'order_actions') 
     list_editable = ('status', 'is_paid') 
-    list_filter = ('status', 'date')
+    list_filter = ('status', 'is_cancelled', 'date')
     search_fields = ('customer_name', 'customer_phone')
-    actions = [mark_as_delivered]
+    actions = [mark_as_delivered, cancel_selected_orders]
     inlines = [OrderItemInline]
 
     def order_actions(self, obj):
-        return format_html(
-            '<a class="button" href="{}">📄 Bill</a>&nbsp;'
-            '<a class="button" href="{}" style="background-color:#333; color:white;">📦 Pack List</a>&nbsp;'
-            '<a class="button" href="{}" target="_blank" style="background-color:#f1c40f; color:black; font-weight:bold;">🖨️ Receipt</a>',
-            reverse('order_invoice', args=[obj.id]),      # Link 1
-            reverse('packing_list', args=[obj.id]),       # Link 2
-            reverse('order_receipt_pdf', args=[obj.id]),  # Link 3
+        actions_html = (
+            f'<a class="button" href="{reverse("order_invoice", args=[obj.id])}">📄 Bill</a>&nbsp;'
+            f'<a class="button" href="{reverse("packing_list", args=[obj.id])}" style="background-color:#333; color:white;">📦 Pack List</a>&nbsp;'
+            f'<a class="button" href="{reverse("order_receipt_pdf", args=[obj.id])}" target="_blank" style="background-color:#f1c40f; color:black; font-weight:bold;">🖨️ Receipt</a>'
         )
+        
+        # Agar Order Cancelled nahi hai aur delivered bhi nahi hai, tabhi Direct Cancel ka button dikhayenge
+        if not obj.is_cancelled and not obj.status:
+            cancel_url = reverse('cancel_order', args=[obj.id])
+            actions_html += f'&nbsp;<a class="button" href="{cancel_url}" style="background-color:#e74c3c; color:white;" onclick="return confirm(\'Kya aap is order ko cancel karke stock restore karna chahte hain?\')">❌ Cancel</a>'
+            
+        return format_html(actions_html)
     
     order_actions.short_description = 'Actions'
+
+    # Admin Panel Single Edit Save Override (Jab admin individual order edit karke is_cancelled ko check kare)
+    def save_model(self, request, obj, form, change):
+        if change:
+            old_obj = Order.objects.get(pk=obj.pk)
+            # Check karte hain ki pehle cancelled nahi tha par ab check kar diya hai
+            if not old_obj.is_cancelled and obj.is_cancelled:
+                for item in obj.orderitem_set.all():
+                    if item.variant:
+                        item.variant.stock_quantity += item.quantity
+                        item.variant.save()
+                    elif item.product:
+                        item.product.stock_quantity += item.quantity
+                        item.product.save()
+                messages.success(request, f"Order #{obj.id} Cancel ho gaya hai aur Stock Restore kar diya gaya hai!")
+        super().save_model(request, obj, form, change)
 
 admin.site.register(Order, OrderAdmin)
 admin.site.register(OrderItem)
@@ -133,8 +169,8 @@ except admin.sites.NotRegistered:
 
 class OrderInline(admin.TabularInline):
     model = Order
-    fields = ('id', 'total_amount', 'status', 'date', 'is_paid')
-    readonly_fields = ('id', 'total_amount', 'status', 'date', 'is_paid')
+    fields = ('id', 'total_amount', 'status', 'is_cancelled', 'date', 'is_paid')
+    readonly_fields = ('id', 'total_amount', 'status', 'is_cancelled', 'date', 'is_paid')
     extra = 0  
     can_delete = False 
     ordering = ('-date',)
@@ -160,29 +196,21 @@ admin.site.register(User, CustomUserAdmin)
 # =========================================================================
 @admin.register(ProductVariant)
 class ProductVariantAdmin(admin.ModelAdmin):
-    # Admin screen par ye columns dikhenge
     list_display = ('product', 'weight_or_size', 'exact_stock_count', 'selling_price')
-    
-    # 2. Category ka filter lagane ke liye double underscore (__) use hoga
     list_filter = ('product__category', 'weight_or_size')
-
-    # 🔥 MAGIC: Sabse kam stock wale variants line se sabse upar milenge (0, then 1, then 2...)
     ordering = ['stock_quantity']
-    
     search_fields = ('product__name', 'weight_or_size')
 
-    # Direct Number Display System
     def exact_stock_count(self, obj):
         if obj.stock_quantity == 0:
             return format_html('<b style="color: #e74c3c;">0 Bacha Hai (Khatam)</b>')
         elif obj.stock_quantity <= 5:
-            # 5 ya usse kam bacha hone par number alag se highlight hoga
             return format_html('<b style="color: #e67e22;">{} Bacha Hai</b>', obj.stock_quantity)
         else:
-            # Normal stock ke liye simple number dikhega
             return format_html('<span style="color: #2ecc71;">{} Bacha Hai</span>', obj.stock_quantity)
             
     exact_stock_count.short_description = 'Available Stock' 
+
 
 # =========================================================================
 # 7. DELIVERY ZONE GEOFENCING SYSTEM (LEAFLET MAP DRAWER)
@@ -192,7 +220,6 @@ class DeliveryZoneAdmin(admin.ModelAdmin):
     list_display = ('name', 'is_active', 'total_points')
     list_editable = ('is_active',)
     change_form_template = 'change_form.html'
-    # change_form_template = 'admin/store/deliveryzone/change_form.html'
 
     def total_points(self, obj):
         points = obj.get_coordinates_list()
