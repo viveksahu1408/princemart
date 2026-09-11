@@ -16,11 +16,27 @@
             var katniLat = 23.8341, katniLng = 80.3952;
             var map = L.map('map').setView([katniLat, katniLng], 14);
 
-            // CartoDB Voyager Map Tiles (Fixes 403 Access Blocked Error)
-            L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
+            // 1. Street Map Layer (OSM HOT)
+            var streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
                 maxZoom: 19,
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            }).addTo(map);
+            });
+
+            // 2. High-Resolution Satellite View Layer (Esri World Imagery)
+            var satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                maxZoom: 19,
+                attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+            });
+
+            // Default Satellite Layer render kar rahe hain
+            satelliteLayer.addTo(map);
+
+            // Layer Switcher Control (Top-Right Toggle)
+            var baseMaps = {
+                "🛰️ Satellite View": satelliteLayer,
+                "🗺️ Normal Map": streetLayer
+            };
+            L.control.layers(baseMaps, null, { position: 'topright' }).addTo(map);
 
             var drawnItems = new L.FeatureGroup();
             map.addLayer(drawnItems);
@@ -47,7 +63,7 @@
                 try {
                     var savedCoords = JSON.parse(coordInput.value);
                     var leafletLatPairs = savedCoords.map(c => [c.lat, c.lng]);
-                    var polygon = L.polygon(leafletLatPairs, {color: 'green'}).addTo(drawnItems);
+                    var polygon = L.polygon(leafletLatPairs, {color: '#2ecc71', weight: 3}).addTo(drawnItems);
                     map.fitBounds(polygon.getBounds());
                 } catch(e) {
                     console.log("Parsing error:", e);
