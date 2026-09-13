@@ -24,10 +24,17 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-aofh8gg81z9n_0ds%-r*vnl#b%jp5qvtyyw890mdp!5gtptvd)'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = ['*']
-
+ALLOWED_HOSTS = [
+    'ypmart.in',
+    'www.ypmart.in',
+    'princemart.in',
+    'www.princemart.in',
+    '72.60.233.98',
+    'localhost',
+    '127.0.0.1',
+]
 # Application definition
 
 INSTALLED_APPS = [
