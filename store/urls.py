@@ -5,7 +5,7 @@ urlpatterns = [
     # --- Home & Search ---
     path('', views.home, name='home'),
     
-    # --- Product Detail (Naya Route) ---
+    # --- Product Detail ---
     path('product/<int:product_id>/', views.product_detail, name='product_detail'),
     
     # --- Cart System ---
@@ -27,19 +27,26 @@ urlpatterns = [
     path('terms-conditions/', views.terms_conditions, name='terms_conditions'),
     path('cancel-order/<int:order_id>/', views.cancel_order, name='cancel_order'),
 
-
-   # 🎯 API ENDPOINTS
-# 🎯 API ENDPOINTS
+    # 🎯 API ENDPOINTS
     path('api/categories/', views.api_category_list, name='api_category_list'),
     path('api/products/', views.api_product_list, name='api_product_list'),
-    path('api/cart/add/', views.api_add_to_cart, name='api_add_to_cart'),
     path('api/products/<int:product_id>/', views.api_product_detail, name='api_product_detail'),
     path('api/cart/', views.api_cart_view, name='api_cart_view'),
+    path('api/cart/add/', views.api_add_to_cart, name='api_add_to_cart'),
     path('api/cart/remove/', views.api_remove_from_cart, name='api_remove_from_cart'),
-    path('api/orders/place/', views.api_place_order, name='api_place_order'),    path('api/my-orders/', views.api_my_orders, name='api_my_orders'),
+    
+    # Orders Routes
+    path('api/orders/place/', views.api_place_order, name='api_place_order'),
+    path('api/order/place/', views.api_place_order, name='api_order_place'),
+    path('api/my-orders/', views.api_my_orders, name='api_my_orders'),
+    
+    # Cancel Routes (Flexible Mappings)
+    path('api/cancel-order/', views.api_cancel_order, name='api_cancel_order'),
+    path('api/order/cancel/', views.api_cancel_order, name='api_order_cancel'),
+    path('api/orders/cancel/', views.api_cancel_order, name='api_orders_cancel'),
+    
+    # Utils & Search
     path('api/search/', views.api_product_search, name='api_product_search'),
     path('api/legal-links/', views.api_legal_urls, name='api_legal_urls'),
     path('api/check-delivery/', views.check_delivery_availability, name='check_delivery'),
-    path('api/cancel-order/', views.api_cancel_order, name='api_cancel_order'),
-
-]    
+]
