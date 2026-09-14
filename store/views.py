@@ -785,15 +785,25 @@ def api_place_order(request):
 
     grand_total = total_price + delivery_charge
 
+    # Fix: Ensure order starts with status=False (Pending) & is_cancelled=False
     order = Order.objects.create(
         customer_name=customer_name,
         customer_phone=customer_phone,
         address_details=address_details,
         area=area,
         total_amount=grand_total,  
-        status=False
+        status=False,
+        is_cancelled=False
     )
     
+    # Send Admin Notification (Same as Webapp)
+    Notification.objects.create(
+        title="🎉 New App Order Received!",
+        message=f"{order.customer_name} ne App se order kiya hai (₹{order.total_amount}).",
+        for_admin=True,
+        link=f"/admin/store/order/{order.id}/change/"
+    )
+
     for item in cart_items:
         OrderItem.objects.create(
             order=order,
@@ -805,17 +815,24 @@ def api_place_order(request):
         
         variant = item.variant
         variant.stock_quantity -= item.quantity
+        variant.total_sold += item.quantity
         variant.save()
+        
+        product = item.product
+        product.total_sold += item.quantity
+        product.save()
 
     request.session['customer_phone'] = customer_phone
     cart_items.delete()
 
     return Response({
         'status': 'success',
-        'message': 'Mubarak ho! Order place ho gaya hai. 🎉',
+        'message': 'Order Pending state me received ho gaya hai. 🎉',
         'order_id': order.id,
+        'order_status': 'Pending',
         'grand_total': grand_total
     }, status=status.HTTP_201_CREATED)
+
 
 
 @api_view(['GET'])
