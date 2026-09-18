@@ -2,6 +2,7 @@ from rest_framework import serializers
 from .models import Product, ProductVariant, Category
 from .models import CartItem
 from .models import Order, OrderItem
+from .models import Banner
 
 # 1. Category Serializer
 class CategorySerializer(serializers.ModelSerializer):
@@ -121,5 +122,10 @@ class OrderHistorySerializer(serializers.ModelSerializer):
             except:
                 return ""
         return ""
+
+class BannerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Banner
+        fields = ['id', 'title', 'image', 'is_active']    
     
 # KAtni-PrinceMart#2025

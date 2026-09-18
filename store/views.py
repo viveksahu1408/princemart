@@ -25,7 +25,7 @@ from django.contrib import messages
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import ProductSerializer, CategorySerializer, CartItemSerializer, OrderHistorySerializer
+from .serializers import ProductSerializer,BannerSerializer, CategorySerializer, CartItemSerializer, OrderHistorySerializer
 from .models import Product, ProductVariant, Cart, CartItem, Category
 
 
@@ -1017,3 +1017,51 @@ def api_cancel_order(request):
         'message': f'Order #{order.id} cancel kar diya gaya hai aur stock restore ho gaya.'
     }, status=status.HTTP_200_OK)
 
+# =========================================================================
+# API: DYNAMIC BANNERS FOR HOME PAGE
+# =========================================================================
+@api_view(['GET'])
+def api_banner_list(request):
+    banners = Banner.objects.filter(is_active=True)
+    serializer = BannerSerializer(banners, many=True, context={'request': request})
+    return Response({
+        'status': 'success',
+        'banners': serializer.data
+    }, status=status.HTTP_200_OK)
+
+
+# =========================================================================
+# API: SUGGESTED / RELATED PRODUCTS FOR MOBILE APP
+# =========================================================================
+@api_view(['GET'])
+def api_suggested_products(request, product_id):
+    try:
+        current_product = Product.objects.get(id=product_id)
+    except Product.DoesNotExist:
+        return Response({
+            'status': 'error',
+            'message': 'Product nahi mila!'
+        }, status=status.HTTP_404_NOT_FOUND)
+
+    # 1. Pehle Same Category Ke Baki Products Fetch Karo
+    related_products = Product.objects.filter(
+        category=current_product.category
+    ).exclude(id=current_product.id)[:6]
+
+    # 2. Agar Category me extra products na hon to Random Products fetch karo
+    if not related_products.exists():
+        related_products = Product.objects.exclude(
+            id=current_product.id
+        ).order_by('?')[:6]
+
+    serializer = ProductSerializer(
+        related_products, 
+        many=True, 
+        context={'request': request}
+    )
+
+    return Response({
+        'status': 'success',
+        'current_product_id': current_product.id,
+        'suggested_products': serializer.data
+    }, status=status.HTTP_200_OK)
