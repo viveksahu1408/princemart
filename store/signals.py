@@ -27,6 +27,6 @@ def create_default_product_variant(sender, instance, created, **kwargs):
             weight_or_size=variant_name,
             market_price=instance.market_price,
             selling_price=instance.selling_price,
-            stock_quantity=20,  # Default stock strictly 20 pieces
+            stock_quantity=0,  # Default stock strictly 20 pieces
             is_active=True
         )
