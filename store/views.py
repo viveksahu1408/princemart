@@ -20,6 +20,7 @@ from django.views.decorators.csrf import csrf_exempt
 import json
 from .utils import is_location_deliverable
 from django.contrib import messages
+import re
 
 # api vale 
 from rest_framework.decorators import api_view
@@ -418,6 +419,15 @@ def mark_order_received(request, order_id):
     messages.success(request, "Shukriya! Order Complete ho gaya. ✅")
     return redirect('my_orders')    
 
+def contains_hindi(text):
+    """
+    Check karta hai ki text me Devanagari/Hindi characters hain ya nahi.
+    """
+    if not text:
+        return False
+
+    return bool(re.search(r'[\u0900-\u097F]', str(text)))
+
 
 def order_invoice(request, order_id):
     order = get_object_or_404(Order, id=order_id)
@@ -430,9 +440,29 @@ def order_invoice(request, order_id):
     else:
         delivery_charge = 0
 
-    # Windows Path Fix: Backslash ko Forwardslash me convert kar rahe hain
-    raw_font_path = os.path.join(settings.BASE_DIR, 'static', 'fonts', 'NotoSans.ttf')
+    # =====================================================
+    # FONT PATH
+    # =====================================================
+
+    raw_font_path = os.path.join(
+        settings.BASE_DIR,
+        'static',
+        'fonts',
+        'NotoSans.ttf'
+    )
+
     font_path = raw_font_path.replace('\\', '/')
+
+    # =====================================================
+    # CUSTOMER NAME / ADDRESS FONT DETECTION
+    # =====================================================
+
+    customer_name_is_hindi = contains_hindi(order.customer_name)
+
+    customer_address_is_hindi = contains_hindi(
+        f"{order.address_details or ''} "
+        f"{order.get_area_display() or ''}"
+    )
 
     context = {
         'order': order,
@@ -440,8 +470,15 @@ def order_invoice(request, order_id):
         'items_total': items_total,
         'delivery_charge': delivery_charge,
         'today': datetime.date.today(),
+
+        # Font
         'font_path': font_path,
+
+        # Hindi detection
+        'customer_name_is_hindi': customer_name_is_hindi,
+        'customer_address_is_hindi': customer_address_is_hindi,
     }
+
     return render_to_pdf('invoice.html', context)
 
 
@@ -494,16 +531,44 @@ def admin_toggle_status(request, order_id):
 
 
 def order_receipt_pdf(request, order_id):
-    order = get_object_or_404(Order, id=order_id)
-    items = OrderItem.objects.filter(order=order) 
+
+    order = get_object_or_404(
+        Order,
+        id=order_id
+    )
+
+    items = OrderItem.objects.filter(
+        order=order
+    )
+
+    items_total = sum(
+        item.get_cost()
+        for item in items
+    )
+
+    if order.total_amount > items_total:
+
+        delivery_charge = (
+            order.total_amount - items_total
+        )
+
+    else:
+        delivery_charge = 0
 
     context = {
+
         'order': order,
         'items': items,
+        'items_total': items_total,
+        'delivery_charge': delivery_charge,
         'today': datetime.date.today(),
     }
-    return render_to_pdf('invoice.html', context)
 
+
+    return render_to_pdf(
+        'invoice.html',
+        context
+    )
 
 @staff_member_required
 def customer_insights(request):

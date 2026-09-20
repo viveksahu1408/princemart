@@ -1,120 +1,533 @@
 <!DOCTYPE HTML>
 <html>
+
 <head>
+
     <meta charset="utf-8">
+
     <style>
-        /* Hindi Font (Noto Sans) Configuration for xhtml2pdf */
+
+        /* =====================================================
+           HINDI / DEVANAGARI FONT
+           ===================================================== */
+
         @font-face {
             font-family: 'NotoSansHindi';
             src: url('file:///{{ font_path }}');
         }
 
+
+        /* =====================================================
+           PAGE SETTINGS
+           ===================================================== */
+
         @page {
-            size: 3.15in 20in; /* 80mm thermal printer height */
+            size: 3.15in 20in;
             margin: 0.1in;
         }
 
-        body { 
-            font-family: 'NotoSansHindi', sans-serif;
-            font-size: 12px; 
-            color: #000; 
-            margin: 0; 
-            padding: 0; 
+
+        /* =====================================================
+           MAIN BODY
+           ===================================================== */
+
+        body {
+            font-family: Helvetica;
+            font-size: 12px;
+            color: #000000;
+            margin: 0;
+            padding: 0;
         }
 
-        .header { text-align: center; margin-bottom: 2px; }
-        .store-name { font-size: 15px; font-weight: bold; }
-        
-        .table { 
-            width: 100%; 
-            border-collapse: collapse; 
-            border: 1px solid #000; 
+
+        /* =====================================================
+           HEADER
+           ===================================================== */
+
+        .header {
+            text-align: center;
+            margin-bottom: 5px;
         }
-        .table th, .table td { 
-            border: 1px solid #000; 
-            padding: 3px; 
-            text-align: left;
-            font-size: 8px; 
+
+
+        .store-name {
+            font-family: Helvetica;
+            font-size: 15px;
+            font-weight: bold;
         }
-        .table th { background-color: #f2f2f2; }
-        
-        .item-name { font-size: 8px; font-weight: bold; }
-        
-        .total-section { 
-            margin-top: 8px; 
-            text-align: right; 
+
+
+        .store-address {
+            font-family: Helvetica;
+            font-size: 12px;
+            margin-top: 2px;
+        }
+
+
+        .invoice-title {
+            font-family: Helvetica;
+            font-size: 16px;
+            font-weight: bold;
+            margin: 5px 0;
+            border-bottom: 1px solid #000;
+        }
+
+
+        .mode {
+            font-family: Helvetica;
+            font-size: 12px;
+        }
+
+
+        /* =====================================================
+           CUSTOMER DETAILS
+           ===================================================== */
+
+        .customer-details {
+            font-family: Helvetica;
             font-size: 10px;
+            margin-bottom: 12px;
+            line-height: 1.4;
         }
+
+
+        /* =====================================================
+           HINDI CUSTOMER TEXT
+           ===================================================== */
+
+        .customer-hindi {
+            font-family: 'NotoSansHindi';
+        }
+
+
+        /* =====================================================
+           ENGLISH CUSTOMER TEXT
+           ===================================================== */
+
+        .customer-english {
+            font-family: Helvetica;
+        }
+
+
+        /* =====================================================
+           PRODUCTS TABLE
+           Product names ALWAYS English
+           ===================================================== */
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid #000000;
+        }
+
+
+        .table th,
+        .table td {
+            border: 1px solid #000000;
+            padding: 3px;
+            text-align: left;
+            font-size: 8px;
+            font-family: Helvetica;
+        }
+
+
+        .table th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+
+
+        /* =====================================================
+           PRODUCT NAME
+           ALWAYS ENGLISH
+           ===================================================== */
+
+        .item-name {
+            font-family: Helvetica;
+            font-size: 8px;
+            font-weight: bold;
+        }
+
+
+        /* =====================================================
+           NUMBERS
+           ===================================================== */
+
+        .number {
+            font-family: Helvetica;
+            font-size: 8px;
+        }
+
+
+        /* =====================================================
+           TOTAL SECTION
+           ===================================================== */
+
+        .total-section {
+            margin-top: 8px;
+            text-align: right;
+            font-size: 10px;
+            font-family: Helvetica;
+        }
+
+
+        .grand-total {
+            font-family: Helvetica;
+            font-size: 12px;
+            font-weight: bold;
+            margin-top: 4px;
+            border-top: 1px solid #000;
+            padding-top: 2px;
+        }
+
+
+        /* =====================================================
+           FOOTER
+           ===================================================== */
 
         .footer {
             margin-top: 20px;
             text-align: center;
-            border-top: 1px dashed #000;
+            border-top: 1px dashed #000000;
             padding-top: 5px;
+            font-family: Helvetica;
+            font-size: 9px;
         }
+
     </style>
+
 </head>
+
+
 <body>
+
+
+    <!-- =====================================================
+         HEADER
+         ===================================================== -->
+
     <div class="header">
-        <div class="store-name">YP-Mart</div>
-        <div style="font-size: 12px;">Madhav Nagar, Katni, MP - 483501</div>
-        <h3 style="margin: 5px 0; border-bottom: 1px solid #000;">INVOICE</h3>
-        
-        <p style="font-size: 12px;"><strong>Mode:</strong> 
-            {% if order.delivery_mode == 'Pickup' %} SELF PICKUP {% else %} Home Delivery {% endif %}
-        </p>
+
+        <div class="store-name">
+            YP-Mart
+        </div>
+
+
+        <!-- Store Address - ALWAYS ENGLISH -->
+
+        <div class="store-address">
+            Madhav Nagar, Katni, MP - 483501
+        </div>
+
+
+        <div class="invoice-title">
+            INVOICE
+        </div>
+
+
+        <div class="mode">
+
+            <strong>Mode:</strong>
+
+            {% if order.delivery_mode == 'Pickup' %}
+
+                SELF PICKUP
+
+            {% else %}
+
+                Home Delivery
+
+            {% endif %}
+
+        </div>
+
     </div>
 
-    <div style="margin-bottom: 12px;">
-        <strong>Bill To:</strong><br>
-        Name: {{ order.customer_name }}<br>
-        Phone: {{ order.customer_phone }}<br>
-        Address: {{ order.address_details }} 
-                {{ order.get_area_display }}<br>
-        Date: {{ order.date }} | Order ID: #{{ order.id }}
+
+
+    <!-- =====================================================
+         CUSTOMER DETAILS
+         ===================================================== -->
+
+    <div class="customer-details">
+
+        <strong>Bill To:</strong>
+
+        <br>
+
+
+        <!-- =================================================
+             CUSTOMER NAME
+             Hindi -> NotoSansHindi
+             English -> Helvetica
+             ================================================= -->
+
+        Name:
+
+        {% if customer_name_is_hindi %}
+
+            <span class="customer-hindi">
+                {{ order.customer_name }}
+            </span>
+
+        {% else %}
+
+            <span class="customer-english">
+                {{ order.customer_name }}
+            </span>
+
+        {% endif %}
+
+        <br>
+
+
+        <!-- =================================================
+             PHONE - ALWAYS ENGLISH
+             ================================================= -->
+
+        Phone:
+
+        <span class="customer-english">
+            {{ order.customer_phone }}
+        </span>
+
+        <br>
+
+
+        <!-- =================================================
+             CUSTOMER ADDRESS
+             Hindi -> NotoSansHindi
+             English -> Helvetica
+             ================================================= -->
+
+        Address:
+
+        {% if customer_address_is_hindi %}
+
+            <span class="customer-hindi">
+                {{ order.address_details }}
+            </span>
+
+        {% else %}
+
+            <span class="customer-english">
+                {{ order.address_details }}
+            </span>
+
+        {% endif %}
+
+
+        <!-- =================================================
+             AREA
+             Dropdown value -> ALWAYS ENGLISH
+             ================================================= -->
+
+        <span class="customer-english">
+            {{ order.get_area_display }}
+        </span>
+
+
+        <br>
+
+
+        <!-- =================================================
+             DATE + ORDER ID
+             ================================================= -->
+
+        Date:
+
+        {{ order.date }}
+
+        |
+
+        Order ID:
+
+        #{{ order.id }}
+
     </div>
+
+
+
+    <!-- =====================================================
+         PRODUCTS TABLE
+         ===================================================== -->
 
     <table class="table">
+
         <thead>
+
             <tr>
-                <th style="width: 50%;">Item</th>
-                <th style="width: 12%;">Qty</th>
-                <th style="width: 18%;">Price</th>
-                <th style="width: 20%;">Total</th>
+
+                <th style="width: 50%;">
+                    Item
+                </th>
+
+
+                <th style="width: 12%; text-align: center;">
+                    Qty
+                </th>
+
+
+                <th style="width: 18%;">
+                    Price
+                </th>
+
+
+                <th style="width: 20%;">
+                    Total
+                </th>
+
             </tr>
+
         </thead>
+
+
         <tbody>
+
+
             {% for item in items %}
+
             <tr>
+
+
+                <!-- =========================================
+                     PRODUCT NAME
+                     ALWAYS ENGLISH
+                     ========================================= -->
+
                 <td>
+
                     <span class="item-name">
+
                         {{ item.product.name }}
-                        {% if item.variant %} ({{ item.variant.weight_or_size|default:"" }}){% endif %}
+
+                        {% if item.variant %}
+
+                            (
+                            {{ item.variant.weight_or_size|default:"" }}
+                            )
+
+                        {% endif %}
+
                     </span>
+
                 </td>
-                <td style="text-align: center;">{{ item.quantity }}</td>
-                <td>{{ item.price }}</td>
-                <td style="text-align: left;"> Rs. {{ item.get_cost|stringformat:".0f" }}</td>
+
+
+                <!-- =========================================
+                     QUANTITY
+                     ========================================= -->
+
+                <td style="text-align: center;">
+
+                    <span class="number">
+                        {{ item.quantity }}
+                    </span>
+
+                </td>
+
+
+                <!-- =========================================
+                     PRICE
+                     ========================================= -->
+
+                <td>
+
+                    <span class="number">
+                        {{ item.price }}
+                    </span>
+
+                </td>
+
+
+                <!-- =========================================
+                     TOTAL
+                     ========================================= -->
+
+                <td>
+
+                    <span class="number">
+
+                        Rs.
+                        {{ item.get_cost|stringformat:".0f" }}
+
+                    </span>
+
+                </td>
+
+
             </tr>
-            {% endfor %}  
+
+            {% endfor %}
+
+
         </tbody>
+
     </table>
 
+
+
+    <!-- =====================================================
+         TOTAL SECTION
+         ===================================================== -->
+
     <div class="total-section">
-        Items Subtotal: Rs. {{ items_total }}<br>
-        Delivery Charge: 
+
+
+        Items Subtotal:
+
+        Rs.
+
+        {{ items_total }}
+
+        <br>
+
+
+        Delivery Charge:
+
+
         {% if delivery_charge > 0 %}
-            Rs. {{ delivery_charge }}
+
+            Rs.
+
+            {{ delivery_charge }}
+
         {% else %}
+
             FREE
-        {% endif %}<br>
-        <div style="font-size: 12px; font-weight: bold; margin-top: 4px; border-top: 1px solid #000; padding-top: 2px;">
-            Grand Total: Rs. {{ order.total_amount }}
+
+        {% endif %}
+
+
+        <br>
+
+
+        <div class="grand-total">
+
+            Grand Total:
+
+            Rs.
+
+            {{ order.total_amount }}
+
         </div>
+
+
     </div>
 
+
+
+    <!-- =====================================================
+         FOOTER
+         ===================================================== -->
+
     <div class="footer">
+
         Thank you for shopping with YP-Mart!
+
     </div>
+
+
 </body>
+
 </html>

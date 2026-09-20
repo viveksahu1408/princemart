@@ -9,28 +9,83 @@ import json
 from .models import DeliveryZone
 
 
-FONT_PATH = os.path.join(settings.BASE_DIR, 'static', 'fonts', 'NotoSans.ttf')
+
+# ============================================================
+# HINDI / DEVANAGARI FONT CONFIGURATION
+# ============================================================
+
+FONT_PATH = os.path.join(
+    settings.BASE_DIR,
+    'static',
+    'fonts',
+    'NotoSans.ttf'
+)
+
+FONT_PATH = os.path.join(
+    settings.BASE_DIR,
+    'static',
+    'fonts',
+    'NotoSans.ttf'
+)
+
+
+# Register Hindi Font
 if os.path.exists(FONT_PATH):
     try:
-        pdfmetrics.registerFont(TTFont('NotoSansHindi', FONT_PATH))
-    except Exception as e:
-        print(f"Font Load Error: {e}")
 
-def render_to_pdf(template_src, context_dict={}):
+        pdfmetrics.registerFont(
+            TTFont(
+                'NotoSansHindi',
+                FONT_PATH
+            )
+        )
+
+        print("================================")
+        print("Hindi Font Loaded Successfully")
+        print(FONT_PATH)
+        print("================================")
+
+    except Exception as e:
+
+        print("Hindi Font Load Error:")
+        print(e)
+
+else:
+
+    print("Hindi Font NOT FOUND:")
+    print(FONT_PATH)
+
+
+def render_to_pdf(template_src, context_dict=None):
+
+    if context_dict is None:
+        context_dict = {}
+
     template = get_template(template_src)
+
     html = template.render(context_dict)
 
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = 'inline; filename="invoice.pdf"'
+    response = HttpResponse(
+        content_type='application/pdf'
+    )
+
+    response['Content-Disposition'] = (
+        'inline; filename="invoice.pdf"'
+    )
 
     pisa_status = pisa.CreatePDF(
-        html, 
-        dest=response, 
+        html,
+        dest=response,
         encoding='utf-8'
     )
 
     if pisa_status.err:
-        return HttpResponse('PDF generation error', status=500)
+
+        return HttpResponse(
+            'PDF generation error',
+            status=500
+        )
+
     return response
 
 def is_point_in_polygon(point, polygon):

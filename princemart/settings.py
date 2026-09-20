@@ -144,10 +144,10 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # JAZZMIN SETTINGS (Dashboard Design)
 JAZZMIN_SETTINGS = {
-    "site_title": "Prince Mart Admin",
-    "site_header": "Prince Mart",
-    "site_brand": "Prince Mart",
-    "welcome_sign": "Welcome to Prince Mart Dashboard",
+    "site_title": "YP Mart Admin",
+    "site_header": "YP Mart",
+    "site_brand": "YP Mart",
+    "welcome_sign": "Welcome to YP Mart Dashboard",
     "copyright": "Decode Web Tech by vivek sahu",
     "search_model": "store.Product", # Search bar se seedha product dhund lega
     
@@ -179,8 +179,8 @@ JAZZMIN_SETTINGS = {
 
 # UI TWEAKS (Rang-Rogan)
 JAZZMIN_UI_TWEAKS = {
-    "theme": "flatly",   # Ye theme modern hai (Blue/White)
-    "dark_mode_theme": "darkly", # Dark mode bhi chalega
+    "theme": "cyborg",   # Ye theme modern hai (Blue/White)
+    "dark_mode_theme": "superhero", # Dark mode bhi chalega
 }
 
 # settings.py ke end me daal de
