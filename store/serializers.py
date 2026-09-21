@@ -12,10 +12,23 @@ class CategorySerializer(serializers.ModelSerializer):
 
 # 2. Product Variant Serializer (Kyunki ek product ke kayi variants ho sakte hain)
 class ProductVariantSerializer(serializers.ModelSerializer):
+    image = serializers.SerializerMethodField()
+
     class Meta:
         model = ProductVariant
-        fields = ['id', 'weight_or_size', 'color', 'market_price', 'selling_price', 'stock_quantity', 'is_active']
+        fields = ['id', 'weight_or_size', 'color', 'market_price', 'selling_price', 'stock_quantity', 'is_active', 'image']
 
+    def get_image(self, obj):
+        request = self.context.get('request')
+        # Agar variant ki image di hui hai toh woh lo, nahi toh product ki main image le lo
+        img = obj.image if obj.image else obj.product.image
+        if img:
+            if request:
+                return request.build_absolute_uri(img.url)
+            return img.url
+        return None
+
+    
 # 3. Main Product Serializer
 class ProductSerializer(serializers.ModelSerializer):
     category = CategorySerializer(read_only=True)
