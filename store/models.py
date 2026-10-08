@@ -183,6 +183,9 @@ class Order(models.Model):
     area = models.CharField(max_length=100, choices=KATNI_AREAS, default='madhavnagar', help_text="Area Select Karein")
     address_details = models.TextField(blank=True, help_text="House No, Gali No, Landmark") 
     date = models.DateField(default=datetime.datetime.today)
+    # 👇 Yeh do naye fields jodne hain yahan:
+    latitude = models.FloatField(null=True, blank=True, help_text="Customer Latitude")
+    longitude = models.FloatField(null=True, blank=True, help_text="Customer Longitude")
     total_amount = models.DecimalField(default=0, max_digits=10, decimal_places=2)
     status = models.BooleanField(default=False, help_text="Delivery Status")
     is_paid = models.BooleanField(default=False, help_text="Payment Status")

@@ -1,4 +1,4 @@
-# api code start from line number 630 here 
+# api code start from line number 680 here 
 from django.contrib.admin.views.decorators import staff_member_required
 from .models import Product, Order, OrderItem, Category, Banner, DeliveryZone
 import datetime
@@ -18,6 +18,7 @@ from django.http import JsonResponse
 from django.contrib.auth.models import User
 from django.views.decorators.csrf import csrf_exempt
 import json
+import requests
 from .utils import is_location_deliverable
 from django.contrib import messages
 import re
@@ -323,9 +324,28 @@ def checkout(request):
             order = form.save(commit=False)
             if request.user.is_authenticated:
                 order.user = request.user
+
+            # OpenStreetMap / frontend se aane wala lat-lng save karna
+            order.latitude = request.POST.get('user_lat')
+            order.longitude = request.POST.get('user_lng')    
             
             order.total_amount = grand_total
             order.save()
+
+            # Map link aur telegram message
+            map_link = f"https://www.google.com/maps/search/?api=1&query={order.latitude},{order.longitude}" if order.latitude and order.longitude else "Location Not Provided"
+            tg_msg = (
+                f"🚨 *New Web Order Received!*\n\n"
+                f"📦 *Order ID:* #{order.id}\n"
+                f"👤 *Name:* {order.customer_name}\n"
+                f"📞 *Phone:* {order.customer_phone}\n"
+                f"📍 *Address:* {order.address_details}\n"
+                f"🗺 *Google Maps:* [Click Here to Navigate]({map_link})\n"
+                f"💰 *Total:* ₹{order.total_amount}"
+            )
+            send_telegram_notification(tg_msg)
+            
+            
             request.session['customer_phone'] = order.customer_phone
 
             Notification.objects.create(
@@ -663,6 +683,20 @@ def cancel_order(request, order_id):
     return redirect('my_orders')
 
 
+def send_telegram_notification(message):
+    BOT_TOKEN = '8991811742:AAG4xtDgcDpLp1Dqc3hBvoJ4z-01-0cWQ-8'
+    CHAT_ID = '1308258769'
+    try:
+        url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+        payload = {
+            'chat_id': CHAT_ID,
+            'text': message,
+            'parse_mode': 'Markdown'
+        }
+        requests.post(url, json=payload, timeout=5)
+    except Exception as e:
+        print(f"Telegram Error: {e}")
+
 # =========================================================================
 # API CODE STARTS FROM HERE
 # =========================================================================
@@ -850,16 +884,34 @@ def api_place_order(request):
 
     grand_total = total_price + delivery_charge
 
+    user_lat = request.data.get('user_lat')
+    user_lng = request.data.get('user_lng')
+
     # Fix: Ensure order starts with status=False (Pending) & is_cancelled=False
     order = Order.objects.create(
         customer_name=customer_name,
         customer_phone=customer_phone,
         address_details=address_details,
         area=area,
+        latitude=user_lat,
+        longitude=user_lng,
         total_amount=grand_total,  
         status=False,
         is_cancelled=False
     )
+
+    map_link = f"https://www.google.com/maps/search/?api=1&query={order.latitude},{order.longitude}" if order.latitude and order.longitude else "Location Not Provided"
+    tg_msg = (
+        f"📱 *New Mobile App Order!* 🚀\n\n"
+        f"📦 *Order ID:* #{order.id}\n"
+        f"👤 *Name:* {order.customer_name}\n"
+        f"📞 *Phone:* {order.customer_phone}\n"
+        f"📍 *Address:* {order.address_details}\n"
+        f"🗺 *Google Maps:* [Click Here to Navigate]({map_link})\n"
+        f"💰 *Total:* ₹{order.total_amount}"
+    )
+    send_telegram_notification(tg_msg)
+
     
     # Send Admin Notification (Same as Webapp)
     Notification.objects.create(
