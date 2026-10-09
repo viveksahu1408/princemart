@@ -911,8 +911,10 @@ def api_place_order(request):
         customer_phone=customer_phone,
         address_details=address_details,
         area=area,
-        latitude=user_lat,
-        longitude=user_lng,
+        # latitude=user_lat,
+        # longitude=user_lng,
+        latitude=cart.latitude,   # 👈 Cart se utha liya
+        longitude=cart.longitude, # 👈 Cart se utha liya
         total_amount=grand_total,  
         status=False,
         is_cancelled=False
@@ -1101,6 +1103,14 @@ def check_delivery_availability(request):
                 'message': 'Invalid latitude/longitude value!'
             }, status=status.HTTP_400_BAD_REQUEST)
 
+        try:
+            cart = Cart.objects.get(cart_id=_cart_id(request))
+            cart.latitude = lat_float
+            cart.longitude = lng_float
+            cart.save()
+        except Cart.DoesNotExist:
+            pass
+
         is_deliverable = is_location_deliverable(lat_float, lng_float)
 
         if is_deliverable:
@@ -1110,6 +1120,8 @@ def check_delivery_availability(request):
             
     except Exception as e:
         return Response({'available': False, 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 # =========================================================================
 # API: CANCEL ORDER & RESTORE STOCK FOR MOBILE APP
 # =========================================================================
