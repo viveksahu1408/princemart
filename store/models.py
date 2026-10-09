@@ -245,3 +245,12 @@ class Notification(models.Model):
 
     def __str__(self):
         return self.title
+
+class TelegramSubscriber(models.Model):
+    name = models.CharField(max_length=100, help_text="Jaise: Admin Vivek, Delivery Boy Ramesh")
+    chat_id = models.CharField(max_length=50, unique=True, help_text="Telegram Chat ID")
+    is_active = models.BooleanField(default=True, help_text="Check remove karne par message jana band ho jayega")
+
+    def __str__(self):
+        return f"{self.name} ({self.chat_id})"
+    

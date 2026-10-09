@@ -6,6 +6,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin
 from django.db.models import Min
 from django.contrib import messages
+from .models import TelegramSubscriber
 
 # =========================================================================
 # 1. CATEGORY REGISTRATION
@@ -237,3 +238,5 @@ class DeliveryZoneAdmin(admin.ModelAdmin):
             'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
             'https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js',
         )
+
+admin.site.register(TelegramSubscriber)        

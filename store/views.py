@@ -22,6 +22,7 @@ import requests
 from .utils import is_location_deliverable
 from django.contrib import messages
 import re
+from .models import TelegramSubscriber # Model ko import karna mat bhoolna
 
 # api vale 
 from rest_framework.decorators import api_view
@@ -683,19 +684,37 @@ def cancel_order(request, order_id):
     return redirect('my_orders')
 
 
+# def send_telegram_notification(message):
+#     BOT_TOKEN = '8991811742:AAG4xtDgcDpLp1Dqc3hBvoJ4z-01-0cWQ-8'
+#     CHAT_ID = '1308258769'
+#     try:
+#         url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+#         payload = {
+#             'chat_id': CHAT_ID,
+#             'text': message,
+#             'parse_mode': 'Markdown'
+#         }
+#         requests.post(url, json=payload, timeout=5)
+#     except Exception as e:
+#         print(f"Telegram Error: {e}")
+
 def send_telegram_notification(message):
     BOT_TOKEN = '8991811742:AAG4xtDgcDpLp1Dqc3hBvoJ4z-01-0cWQ-8'
-    CHAT_ID = '1308258769'
-    try:
-        url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-        payload = {
-            'chat_id': CHAT_ID,
-            'text': message,
-            'parse_mode': 'Markdown'
-        }
-        requests.post(url, json=payload, timeout=5)
-    except Exception as e:
-        print(f"Telegram Error: {e}")
+    
+    # 📊 Database se sabhi active users ki Chat IDs nikal rahe hain
+    subscribers = TelegramSubscriber.objects.filter(is_active=True)
+    
+    for sub in subscribers:
+        try:
+            url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+            payload = {
+                'chat_id': sub.chat_id,
+                'text': message,
+                'parse_mode': 'Markdown'
+            }
+            requests.post(url, json=payload, timeout=5)
+        except Exception as e:
+            print(f"Telegram Error for {sub.chat_id}: {e}")        
 
 # =========================================================================
 # API CODE STARTS FROM HERE
@@ -871,6 +890,8 @@ def api_place_order(request):
     customer_phone = request.data.get('customer_phone')
     address_details = request.data.get('address_details')
     area = request.data.get('area') 
+    user_lat = request.data.get('user_lat') 
+    user_lng = request.data.get('user_lng') 
 
     if not customer_name or not customer_phone or not address_details:
         return Response({'status': 'error', 'message': 'Name, Phone, aur Address zaroori hain!'}, status=status.HTTP_400_BAD_REQUEST)
@@ -884,10 +905,7 @@ def api_place_order(request):
 
     grand_total = total_price + delivery_charge
 
-    user_lat = request.data.get('user_lat')
-    user_lng = request.data.get('user_lng')
-
-    # Fix: Ensure order starts with status=False (Pending) & is_cancelled=False
+    # Order Create ho raha hai lat/lng ke sath
     order = Order.objects.create(
         customer_name=customer_name,
         customer_phone=customer_phone,
@@ -899,21 +917,8 @@ def api_place_order(request):
         status=False,
         is_cancelled=False
     )
-
-    map_link = f"https://www.google.com/maps/search/?api=1&query={order.latitude},{order.longitude}" if order.latitude and order.longitude else "Location Not Provided"
-    tg_msg = (
-        f"📱 *New Mobile App Order!* 🚀\n\n"
-        f"📦 *Order ID:* #{order.id}\n"
-        f"👤 *Name:* {order.customer_name}\n"
-        f"📞 *Phone:* {order.customer_phone}\n"
-        f"📍 *Address:* {order.address_details}\n"
-        f"🗺 *Google Maps:* [Click Here to Navigate]({map_link})\n"
-        f"💰 *Total:* ₹{order.total_amount}"
-    )
-    send_telegram_notification(tg_msg)
-
     
-    # Send Admin Notification (Same as Webapp)
+    # Send Admin Notification on Website Dashboard
     Notification.objects.create(
         title="🎉 New App Order Received!",
         message=f"{order.customer_name} ne App se order kiya hai (₹{order.total_amount}).",
@@ -921,6 +926,7 @@ def api_place_order(request):
         link=f"/admin/store/order/{order.id}/change/"
     )
 
+    # Order Items create karna aur stock update karna
     for item in cart_items:
         OrderItem.objects.create(
             order=order,
@@ -939,17 +945,31 @@ def api_place_order(request):
         product.total_sold += item.quantity
         product.save()
 
+    # Telegram Notification with Google Maps Link
+    map_link = f"https://www.google.com/maps/search/?api=1&query={order.latitude},{order.longitude}" if order.latitude and order.longitude else "Location Not Provided"
+
+    tg_msg = (
+        f"📱 *New Mobile App Order!* 🚀\n\n"
+        f"📦 *Order ID:* #{order.id}\n"
+        f"👤 *Name:* {order.customer_name}\n"
+        f"📞 *Phone:* {order.customer_phone}\n"
+        f"📍 *Address:* {order.address_details}\n"
+        f"🗺 *Google Maps:* [Click Here to Navigate]({map_link})\n"
+        f"💰 *Total:* ₹{order.total_amount}"
+    )
+    send_telegram_notification(tg_msg)
+
+    # Session update aur cart khali karna
     request.session['customer_phone'] = customer_phone
     cart_items.delete()
 
     return Response({
         'status': 'success',
-        'message': 'Order Pending state me received ho gaya hai. 🎉',
+        'message': 'Order successfully place ho gaya hai! 🎉',
         'order_id': order.id,
         'order_status': 'Pending',
         'grand_total': grand_total
     }, status=status.HTTP_201_CREATED)
-
 
 
 @api_view(['GET'])
