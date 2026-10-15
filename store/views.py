@@ -222,7 +222,7 @@ def cart_details(request):
     except ObjectDoesNotExist:
         pass 
 
-    if total_price > 0 and total_price < 1000:
+    if total_price > 0 and total_price < 500:
         delivery_charge = 15
     else:
         delivery_charge = 0
@@ -298,7 +298,7 @@ def checkout(request):
         else:
             total_price += (item.product.selling_price * item.quantity)
 
-    if total_price > 0 and total_price < 1000:
+    if total_price > 0 and total_price < 500:
         delivery_charge = 15
     else:
         delivery_charge = 0
@@ -811,7 +811,7 @@ def api_cart_view(request):
     total_price = sum(item.variant.selling_price * item.quantity for item in cart_items)
     cart_count = sum(item.quantity for item in cart_items)
 
-    if total_price > 0 and total_price < 1000:
+    if total_price > 0 and total_price < 500:
         delivery_charge = 15
     else:
         delivery_charge = 0
@@ -857,7 +857,7 @@ def api_remove_from_cart(request):
     total_price = sum(item.variant.selling_price * item.quantity for item in cart_items)
     cart_count = sum(item.quantity for item in cart_items)
 
-    if total_price > 0 and total_price < 1000:
+    if total_price > 0 and total_price < 500:
         delivery_charge = 15
     else:
         delivery_charge = 0
@@ -898,7 +898,7 @@ def api_place_order(request):
 
     total_price = sum(item.variant.selling_price * item.quantity for item in cart_items)
     
-    if total_price > 0 and total_price < 1000:
+    if total_price > 0 and total_price < 500:
         delivery_charge = 15
     else:
         delivery_charge = 0
